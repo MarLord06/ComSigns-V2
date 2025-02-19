@@ -34,8 +34,6 @@ def main():
             cv2.putText(frame, f'Prediccion: {predicted_letter}', (10, 30),
                         cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 1, cv2.LINE_AA)
 
-
-
             if key == 32:  # Espacio
                 palabra += " "
                 print(f"Palabra actual: {palabra}")
