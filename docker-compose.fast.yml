@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # Backend API optimizado para desarrollo
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+      cache_from:
+        - comsigns-backend-fast
+    image: comsigns-backend-fast
+    container_name: comsigns-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL_LOCAL=postgresql://postgres:postgres@postgres:5432/comsigns_dev
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - SUPABASE_URL=https://xqdlbbwavnmkewvjaget.supabase.co
+      - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxZGxiYndhdm5ta2V3dmphZ2V0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwOTUxNjksImV4cCI6MjA2ODY3MTE2OX0.MRfDvIbM8zOEwTj6muzZTzeNwWoQ-TfjzExjMIabLs4
+      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxZGxiYndhdm5ta2V3dmphZ2V0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzA5NTE2OSwiZXhwIjoyMDY4NjcxMTY5fQ.gU5Z6p3gfa96UVOzPb72vU9J-0wjzb9B829WJaQOTuo
+    volumes:
+      - ./backend:/app:cached  # cached para mejor performance en macOS
+      - ./backend/models:/app/models:cached
+      - backend_cache:/root/.cache/pip  # Cache de pip persistente
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - comsigns-network
+    restart: unless-stopped
+    # Optimizaciones para desarrollo
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
+
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: comsigns-postgres
+    environment:
+      POSTGRES_DB: comsigns_db
+      POSTGRES_USER: comsigns_user
+      POSTGRES_PASSWORD: comsigns_password123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - comsigns-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U comsigns_user -d comsigns_db"]
+      interval: 10s  # Más frecuente para desarrollo
+      timeout: 5s
+      retries: 3
+    # Optimizaciones para desarrollo
+    command: >
+      postgres
+      -c shared_preload_libraries=''
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+
+  # Redis para cache y sesiones
+  redis:
+    image: redis:7-alpine
+    container_name: comsigns-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - comsigns-network
+    restart: unless-stopped
+    # Optimizaciones para desarrollo
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+
+  # Adminer para gestión de BD (opcional)
+  adminer:
+    image: adminer:latest
+    container_name: comsigns-adminer
+    ports:
+      - "8080:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+    depends_on:
+      - postgres
+    networks:
+      - comsigns-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_cache:  # Cache persistente para pip
+    driver: local
+
+networks:
+  comsigns-network:
+    driver: bridge
