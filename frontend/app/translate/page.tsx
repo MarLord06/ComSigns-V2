@@ -32,6 +32,7 @@ export default function TranslatorLivePage() {
   const [error, setError] = useState("")
   const [cameraPermission, setCameraPermission] = useState<"granted" | "denied" | "prompt">("prompt")
   const [isInitializing, setIsInitializing] = useState(false)
+  const [videoLoaded, setVideoLoaded] = useState(false)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -40,9 +41,23 @@ export default function TranslatorLivePage() {
 
   // Inicializar cámara
   const initializeCamera = useCallback(async () => {
+    console.log("🎥 Iniciando proceso de cámara...")
+    
     try {
       setError("")
       setIsInitializing(true)
+      setVideoLoaded(false)
+      
+      // Verificar que el videoRef existe
+      if (!videoRef.current) {
+        console.error("❌ videoRef.current es null - elemento no está en el DOM")
+        setError("Elemento de video no encontrado. Por favor, recarga la página.")
+        setIsInitializing(false)
+        return
+      }
+
+      console.log("✅ Elemento video encontrado:", videoRef.current)
+      console.log("🔍 Solicitando permisos de cámara...")
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -52,56 +67,99 @@ export default function TranslatorLivePage() {
         },
       })
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        streamRef.current = stream
-      }
+      console.log("✅ Stream obtenido:", stream)
+      console.log("📹 Tracks del stream:", stream.getTracks())
+
+      console.log("🎬 Asignando stream al elemento video...")
+      videoRef.current.srcObject = stream
+      streamRef.current = stream
+      setCameraPermission('granted')
+      setIsConnected(true)
+      
+      console.log("⏳ Esperando a que el video cargue...")
+
     } catch (err) {
-      console.error("Error accessing camera:", err)
+      console.error("❌ Error accessing camera:", err)
       setCameraPermission("denied")
       setIsConnected(false)
       setIsInitializing(false)
-      setError("No se pudo acceder a la cámara. Por favor, verifica los permisos.")
+      
+      if (err instanceof Error) {
+        console.log("Error name:", err.name)
+        console.log("Error message:", err.message)
+        
+        if (err.name === "NotAllowedError") {
+          setError("Permisos de cámara denegados. Por favor, permite el acceso a la cámara y recarga la página.")
+        } else if (err.name === "NotFoundError") {
+          setError("No se encontró una cámara disponible en este dispositivo.")
+        } else {
+          setError("Error al acceder a la cámara: " + err.message)
+        }
+      } else {
+        setError("Error desconocido al acceder a la cámara.")
+      }
     }
   }, [])
 
   // Capturar frame y enviar al backend
   const captureFrame = useCallback(async () => {
-    if (!videoRef.current || !canvasRef.current) return
+    if (!videoRef.current || !canvasRef.current) {
+      console.log("Video or canvas not ready")
+      return
+    }
 
     const canvas = canvasRef.current
     const video = videoRef.current
     const ctx = canvas.getContext("2d")
 
-    if (!ctx) return
+    if (!ctx) {
+      console.log("Cannot get canvas context")
+      return
+    }
 
     // Dibujar frame actual en canvas
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
     ctx.drawImage(video, 0, 0)
 
+    console.log("Capturing frame:", canvas.width, "x", canvas.height)
+
     // Convertir a blob para enviar al backend
     canvas.toBlob(
       async (blob) => {
-        if (!blob) return
+        if (!blob) {
+          console.log("Failed to create blob")
+          return
+        }
 
         try {
           const formData = new FormData()
-          formData.append("frame", blob, "frame.jpg")
+          formData.append("file", blob, "frame.jpg")
 
-          // Aquí enviarías al backend que usa cv2
-          const response = await fetch("/api/translate-frame", {
+          console.log("Sending frame to backend...")
+          
+          // Enviar al backend FastAPI
+          const response = await fetch("http://localhost:8000/api/v1/ml/predict/upload", {
             method: "POST",
             body: formData,
           })
 
           if (response.ok) {
             const result = await response.json()
-            setTranslation(result.translation || "")
+            console.log("Prediction result:", result)
+            setTranslation(result.prediction || result.letter || "")
             setConfidence(result.confidence || 0)
+          } else {
+            console.error("API Error:", response.status, response.statusText)
+            // Modo de prueba - mostrar que el frame se capturó
+            setTranslation("Frame capturado - Backend no disponible")
+            setConfidence(0.5)
           }
         } catch (err) {
           console.error("Error sending frame:", err)
+          // Modo de prueba - mostrar que la cámara está funcionando
+          setTranslation("Cámara funcionando - Error de conexión")
+          setConfidence(0.3)
         }
       },
       "image/jpeg",
@@ -111,14 +169,18 @@ export default function TranslatorLivePage() {
 
   // Iniciar traducción en tiempo real
   const startTranslation = useCallback(() => {
-    if (!isConnected) return
+    if (!isConnected || !videoLoaded) {
+      console.log("No se puede iniciar traducción:", { isConnected, videoLoaded })
+      return
+    }
 
+    console.log("🎬 Iniciando traducción en tiempo real...")
     setIsRecording(true)
     setError("")
 
-    // Capturar frames cada 100ms (10 FPS)
-    intervalRef.current = setInterval(captureFrame, 100)
-  }, [isConnected, captureFrame])
+    // Capturar frames cada 1000ms (1 FPS) para pruebas
+    intervalRef.current = setInterval(captureFrame, 1000)
+  }, [isConnected, videoLoaded, captureFrame])
 
   // Detener traducción
   const stopTranslation = useCallback(() => {
@@ -139,13 +201,34 @@ export default function TranslatorLivePage() {
       streamRef.current = null
     }
 
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+
     setIsConnected(false)
+    setCameraPermission("prompt")
+    setVideoLoaded(false)
+    setTranslation("")
+    setConfidence(0)
+    setError("")
   }, [stopTranslation])
 
   // Efectos
   useEffect(() => {
+    // Solo limpieza al desmontar el componente
     return cleanup
   }, [cleanup])
+
+  // Efecto separado para debugging de estados
+  useEffect(() => {
+    console.log("Estados actuales:", {
+      cameraPermission,
+      isConnected,
+      videoLoaded,
+      isInitializing,
+      streamExists: !!streamRef.current
+    })
+  }, [cameraPermission, isConnected, videoLoaded, isInitializing])
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -296,25 +379,49 @@ export default function TranslatorLivePage() {
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="relative bg-gray-900 aspect-video">
-                    {cameraPermission === "granted" ? (
+                    {/* Video SIEMPRE presente pero oculto condicionalmente */}
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className={`w-full h-full object-cover ${
+                        cameraPermission === "granted" && streamRef.current ? "block" : "hidden"
+                      }`}
+                      aria-label="Vista en vivo de la cámara para captura de lenguaje de señas"
+                      onLoadedMetadata={() => {
+                        console.log("✅ Video metadata cargado - Video listo!")
+                        setVideoLoaded(true)
+                        setIsInitializing(false)
+                      }}
+                      onLoadedData={() => {
+                        console.log("✅ Video data cargado")
+                        setVideoLoaded(true)
+                        setIsInitializing(false)
+                      }}
+                      onError={(e) => {
+                        console.error("❌ Video error:", e)
+                        setError("Error al cargar el video. Por favor, verifica la cámara.")
+                        setIsInitializing(false)
+                      }}
+                    />
+                    
+                    {/* Canvas SIEMPRE presente */}
+                    <canvas ref={canvasRef} className="hidden" />
+
+                    {/* Overlays condicionales */}
+                    {cameraPermission === "granted" && streamRef.current ? (
                       <>
-                        <video
-                          ref={videoRef}
-                          autoPlay
-                          playsInline
-                          muted
-                          className="w-full h-full object-cover"
-                          aria-label="Vista en vivo de la cámara para captura de lenguaje de señas"
-                          onLoadedMetadata={() => {
-                            setCameraPermission("granted")
-                            setIsConnected(true)
-                            setIsInitializing(false)
-                          }}
-                        />
-                        <canvas ref={canvasRef} className="hidden" />
+                        {/* Loading overlay mientras el video carga */}
+                        {isInitializing && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+                            <p>Cargando cámara...</p>
+                          </div>
+                        )}
 
                         {/* Recording Indicator */}
-                        {isRecording && (
+                        {isRecording && videoLoaded && (
                           <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium">
                             <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                             REC
@@ -322,14 +429,15 @@ export default function TranslatorLivePage() {
                         )}
 
                         {/* Confidence Indicator */}
-                        {confidence > 0 && (
+                        {confidence > 0 && videoLoaded && (
                           <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
                             Confianza: {Math.round(confidence * 100)}%
                           </div>
                         )}
                       </>
                     ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-white">
+                      /* Placeholder cuando no hay cámara */
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
                         <Camera className="h-16 w-16 mb-4 opacity-50" />
                         {isInitializing ? (
                           <>
@@ -353,7 +461,7 @@ export default function TranslatorLivePage() {
                   {/* Camera Controls */}
                   <div className="p-4 bg-gray-50 border-t">
                     <div className="flex items-center justify-center gap-4">
-                      {cameraPermission !== "granted" ? (
+                      {cameraPermission !== "granted" || !streamRef.current ? (
                         <Button
                           onClick={initializeCamera}
                           className="bg-blue-600 hover:bg-blue-700"
@@ -369,7 +477,7 @@ export default function TranslatorLivePage() {
                             <Button
                               onClick={startTranslation}
                               className="bg-green-600 hover:bg-green-700"
-                              disabled={!isConnected}
+                              disabled={!isConnected || !videoLoaded}
                               aria-describedby="start-desc"
                             >
                               <Play className="h-4 w-4 mr-2" />

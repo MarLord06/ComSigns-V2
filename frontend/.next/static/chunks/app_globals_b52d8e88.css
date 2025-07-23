@@ -474,6 +474,10 @@
     -webkit-line-clamp: 1;
   }
 
+  .block {
+    display: block;
+  }
+
   .flex {
     display: flex;
   }
