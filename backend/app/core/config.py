@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     )
     
     # Machine Learning
-    MODEL_PATH: str = Field(default="/app/models/model_trained_v2_fixed.h5", env="MODEL_PATH")
+    MODEL_PATH: str = Field(default="/app/models/model.h5", env="MODEL_PATH")
     CONFIDENCE_THRESHOLD: float = Field(default=0.65, env="CONFIDENCE_THRESHOLD")
     
     # Arduino (opcional)

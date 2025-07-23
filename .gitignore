@@ -260,7 +260,6 @@ docker-compose.override.yml
 docker-compose.local.yml
 
 # Machine Learning & AI
-*.h5
 *.hdf5
 *.pkl
 *.pickle
