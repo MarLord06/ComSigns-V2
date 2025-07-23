@@ -173,11 +173,6 @@ cd frontend && npm test
 4. **Push** a la rama (`git push origin feature/nueva-funcionalidad`)
 5. **Abre** un Pull Request
 
-### **Pautas de Contribución**
-- ✅ Mantén el código documentado
-- ✅ Incluye tests para nuevas funcionalidades
-- ✅ Sigue las convenciones de código existentes
-- ✅ Actualiza documentación cuando sea necesario
 
 ## 📄 **Licencia**
 
@@ -197,7 +192,7 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 
 ---
 
-**🤟 Desarrollado con ❤️ para promover la inclusión y accesibilidad**
+**🤟 Desarrollado para promover la inclusión y accesibilidad**
 
 [![Made with FastAPI](https://img.shields.io/badge/Made%20with-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
 [![Made with Next.js](https://img.shields.io/badge/Made%20with-Next.js-000000.svg)](https://nextjs.org/)
