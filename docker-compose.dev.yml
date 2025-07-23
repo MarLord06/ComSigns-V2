@@ -11,7 +11,6 @@ services:
       - "8000:8000"
     environment:
       - ENVIRONMENT=development
-      - DATABASE_URL_LOCAL=postgresql://postgres:postgres@postgres:5432/comsigns_dev
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=dev-secret-key-change-in-production
       - SUPABASE_URL=https://xqdlbbwavnmkewvjaget.supabase.co
@@ -21,7 +20,6 @@ services:
       - ./backend:/app
       - ./backend/models:/app/models  # Montar modelos del backend
     depends_on:
-      - postgres
       - redis
     networks:
       - comsigns-network
@@ -29,24 +27,6 @@ services:
 
   # Base de datos PostgreSQL
   postgres:
-    image: postgres:15-alpine
-    container_name: comsigns-postgres
-    environment:
-      POSTGRES_DB: comsigns_db
-      POSTGRES_USER: comsigns_user
-      POSTGRES_PASSWORD: comsigns_password123
-    ports:
-      - "5433:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - comsigns-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U comsigns_user -d comsigns_db"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
   # Redis para cache y sesiones
   redis:
     image: redis:7-alpine
@@ -60,23 +40,7 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes
 
-  # Adminer para gestión de BD (opcional)
-  adminer:
-    image: adminer:latest
-    container_name: comsigns-adminer
-    ports:
-      - "8080:8080"
-    environment:
-      - ADMINER_DEFAULT_SERVER=postgres
-    depends_on:
-      - postgres
-    networks:
-      - comsigns-network
-    restart: unless-stopped
-
 volumes:
-  postgres_data:
-    driver: local
   redis_data:
     driver: local
 

@@ -7,9 +7,7 @@ import json
 import uuid
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
 from app.core.supabase import supabase_service
 from app.core.config import settings
 from app.modules.ml.services import ml_service, tutorial_service, practice_service
@@ -49,7 +47,7 @@ async def get_model_info():
 
 
 @router.post("/predict", response_model=PredictionResponse)
-async def predict_letter(request: PredictionRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
+async def predict_letter(request: PredictionRequest, http_request: Request):
     """
     Predecir letra basada en imagen de seña
     """
@@ -195,7 +193,7 @@ async def get_tutorial_overview():
 
 
 @router.post("/tutorial/progress", response_model=TutorialProgressResponse)
-async def update_tutorial_progress(request: TutorialProgressRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
+async def update_tutorial_progress(request: TutorialProgressRequest, http_request: Request):
     """
     Actualizar progreso del tutorial
     """
@@ -235,7 +233,7 @@ async def update_tutorial_progress(request: TutorialProgressRequest, http_reques
 
 
 @router.post("/practice/session", response_model=PracticeSessionResponse)
-async def create_practice_session(request: PracticeSessionRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
+async def create_practice_session(request: PracticeSessionRequest, http_request: Request):
     """
     Crear nueva sesión de práctica
     """
@@ -266,7 +264,7 @@ async def create_practice_session(request: PracticeSessionRequest, http_request:
 
 
 @router.post("/practice/result", response_model=PracticeResultResponse)
-async def submit_practice_result(request: PracticeResultRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
+async def submit_practice_result(request: PracticeResultRequest, http_request: Request):
     """
     Enviar resultados de sesión de práctica
     """
@@ -329,7 +327,7 @@ async def get_practice_leaderboard(difficulty: str = "beginner", limit: int = 10
 
 
 @router.get("/stats/predictions")
-async def get_prediction_stats(http_request: Request, db: AsyncSession = Depends(get_db)):
+async def get_prediction_stats(http_request: Request):
     """
     Obtener estadísticas de predicciones
     """

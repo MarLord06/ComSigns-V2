@@ -47,12 +47,11 @@ backend/
 │   ├── main.py                 # Aplicación principal
 │   ├── core/                   # Configuración y utilidades
 │   │   ├── config.py
-│   │   ├── database.py
+│   │   ├── supabase.py         # Cliente Supabase
 │   │   ├── middleware.py
 │   │   └── exceptions.py
 │   ├── modules/               # Módulos de funcionalidad
 │   │   └── ml/               # Módulo Machine Learning
-│   │       ├── models.py     # Modelos SQLAlchemy
 │   │       ├── schemas.py    # Schemas Pydantic
 │   │       ├── services.py   # Lógica de negocio
 │   │       └── routes.py     # Endpoints FastAPI
@@ -65,8 +64,7 @@ backend/
 ```
 
 ### Servicios Docker
-- **backend**: API FastAPI
-- **postgres**: Base de datos PostgreSQL
+- **backend**: API FastAPI con Supabase
 - **redis**: Cache y sesiones
 - **adminer**: Interfaz web para BD
 
@@ -77,8 +75,10 @@ backend/
 # Entorno
 ENVIRONMENT=development
 
-# Base de datos
-DATABASE_URL_LOCAL=postgresql://postgres:postgres@localhost:5432/comsigns_dev
+# Supabase
+SUPABASE_URL=https://xqdlbbwavnmkewvjaget.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # Redis
 REDIS_URL=redis://localhost:6379/0
@@ -187,7 +187,9 @@ tests/
 ### Variables de Producción
 ```bash
 ENVIRONMENT=production
-DATABASE_URL=postgresql://user:pass@host:5432/db
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-production-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-production-service-role-key
 SECRET_KEY=super-secret-production-key
 ```
 
