@@ -103,7 +103,7 @@ if [ $? -eq 0 ]; then
         -p 8000:8000 \
         -v "$(pwd)/backend:/app" \
         -v "$(pwd)/backend/models:/app/models" \
-        --env-file backend/.env \
+        --env-file ./.env \
         comsigns-backend-fast
     
     success "Backend iniciado en http://localhost:8000"

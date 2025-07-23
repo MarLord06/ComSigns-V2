@@ -33,9 +33,9 @@ else
 fi
 
 # Crear archivo .env si no existe
-if [ ! -f "./backend/.env" ]; then
+if [ ! -f "./.env" ]; then
     echo "📄 Creando archivo .env..."
-    cp ./backend/.env.example ./backend/.env
+    cp ./.env.example ./.env
     echo "✅ Archivo .env creado. Puedes modificarlo según tus necesidades."
 fi
 
@@ -63,9 +63,8 @@ echo ""
 echo "📍 Servicios disponibles:"
 echo "   • API Backend:    http://localhost:8000"
 echo "   • Documentación:  http://localhost:8000/docs"
-echo "   • Base de datos:  localhost:5432"
 echo "   • Redis:          localhost:6379"
-echo "   • Adminer (BD):   http://localhost:8080"
+echo "   • Supabase:       https://xqdlbbwavnmkewvjaget.supabase.co"
 echo ""
 echo "🔧 Comandos útiles:"
 echo "   • Ver logs:       $DOCKER_COMPOSE_CMD -f docker-compose.dev.yml logs -f"
