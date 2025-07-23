@@ -272,5 +272,146 @@ class SupabaseService:
             logger.error(f"❌ Error obteniendo leaderboard: {str(e)}")
             return []
 
+    # Gestión de Lecciones del Tutorial
+    async def get_tutorial_lessons(self) -> List[Dict[str, Any]]:
+        """
+        Obtener todas las lecciones del tutorial desde Supabase
+        """
+        if not self.is_connected():
+            return []
+            
+        try:
+            result = (self.supabase
+                     .table("tutorial_lessons")
+                     .select("*")
+                     .eq("is_active", True)
+                     .order("lesson_number")
+                     .execute())
+            
+            return result.data or []
+            
+        except Exception as e:
+            logger.error(f"❌ Error obteniendo lecciones del tutorial: {str(e)}")
+            return []
+
+    async def get_tutorial_lesson_by_number(self, lesson_number: int) -> Optional[Dict[str, Any]]:
+        """
+        Obtener una lección específica del tutorial
+        """
+        if not self.is_connected():
+            return None
+            
+        try:
+            result = (self.supabase
+                     .table("tutorial_lessons")
+                     .select("*")
+                     .eq("lesson_number", lesson_number)
+                     .eq("is_active", True)
+                     .execute())
+            
+            return result.data[0] if result.data else None
+            
+        except Exception as e:
+            logger.error(f"❌ Error obteniendo lección {lesson_number}: {str(e)}")
+            return None
+
+    async def get_tutorial_lessons_by_difficulty(self, difficulty: str) -> List[Dict[str, Any]]:
+        """
+        Obtener lecciones del tutorial por dificultad
+        """
+        if not self.is_connected():
+            return []
+            
+        try:
+            result = (self.supabase
+                     .table("tutorial_lessons")
+                     .select("*")
+                     .eq("difficulty", difficulty)
+                     .eq("is_active", True)
+                     .order("lesson_number")
+                     .execute())
+            
+            return result.data or []
+            
+        except Exception as e:
+            logger.error(f"❌ Error obteniendo lecciones por dificultad {difficulty}: {str(e)}")
+            return []
+
+    # Gestión de Desafíos de Práctica
+    async def get_practice_challenges(self) -> List[Dict[str, Any]]:
+        """
+        Obtener todos los desafíos de práctica desde Supabase
+        """
+        if not self.is_connected():
+            return []
+            
+        try:
+            result = (self.supabase
+                     .table("practice_challenges")
+                     .select("*")
+                     .eq("is_active", True)
+                     .order("challenge_number")
+                     .execute())
+            
+            return result.data or []
+            
+        except Exception as e:
+            logger.error(f"❌ Error obteniendo desafíos de práctica: {str(e)}")
+            return []
+
+    async def get_practice_challenges_by_difficulty(self, difficulty: str) -> List[Dict[str, Any]]:
+        """
+        Obtener desafíos de práctica por dificultad
+        """
+        if not self.is_connected():
+            return []
+            
+        try:
+            result = (self.supabase
+                     .table("practice_challenges")
+                     .select("*")
+                     .eq("difficulty", difficulty)
+                     .eq("is_active", True)
+                     .order("challenge_number")
+                     .execute())
+            
+            return result.data or []
+            
+        except Exception as e:
+            logger.error(f"❌ Error obteniendo desafíos por dificultad {difficulty}: {str(e)}")
+            return []
+
+    async def get_practice_challenges_by_type(self, challenge_type: str) -> List[Dict[str, Any]]:
+        """
+        Obtener desafíos de práctica por tipo
+        """
+        if not self.is_connected():
+            return []
+            
+        try:
+            result = (self.supabase
+                     .table("practice_challenges")
+                     .select("*")
+                     .eq("type", challenge_type)
+                     .eq("is_active", True)
+                     .order("challenge_number")
+                     .execute())
+            
+            return result.data or []
+            
+        except Exception as e:
+            logger.error(f"❌ Error obteniendo desafíos por tipo {challenge_type}: {str(e)}")
+            return []
+
+    async def get_random_practice_challenge(self) -> Optional[Dict[str, Any]]:
+        """
+        Obtener un desafío aleatorio de práctica
+        """
+        challenges = await self.get_practice_challenges()
+        if challenges:
+            import random
+            return random.choice(challenges)
+        return None
+
 # Instancia global del servicio
 supabase_service = SupabaseService()

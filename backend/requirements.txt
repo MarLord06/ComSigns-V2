@@ -56,5 +56,3 @@ python-dotenv==1.0.0
 # Logging
 loguru==0.7.2
 
-# Arduino Communication (optional)
-pyserial==3.5

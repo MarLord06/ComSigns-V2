@@ -4,11 +4,12 @@ Tutorial routes for COMSIGNS
 
 from fastapi import APIRouter, HTTPException
 from typing import List
+from app.core.supabase import supabase_service
 
 router = APIRouter()
 
-# Mock data for tutorial lessons (solo letras disponibles en el dataset original)
-TUTORIAL_LESSONS = [
+# Datos de respaldo en caso de que Supabase no esté disponible
+FALLBACK_TUTORIAL_LESSONS = [
     {"id": 1, "letter": "A", "name": "Letra A", "difficulty": "easy", "description": "Aprende la seña de la letra A"},
     {"id": 2, "letter": "B", "name": "Letra B", "difficulty": "easy", "description": "Aprende la seña de la letra B"},
     {"id": 3, "letter": "C", "name": "Letra C", "difficulty": "easy", "description": "Aprende la seña de la letra C"},
@@ -40,11 +41,19 @@ async def tutorial_root():
     """
     Endpoint raíz del tutorial
     """
+    # Intentar obtener lecciones desde Supabase
+    lessons = await supabase_service.get_tutorial_lessons()
+    
+    # Si Supabase no está disponible, usar datos de respaldo
+    if not lessons:
+        lessons = FALLBACK_TUTORIAL_LESSONS
+    
     return {
         "message": "Tutorial Interactivo COMSIGNS",
         "description": "Aprende el alfabeto del lenguaje de señas ecuatoriano paso a paso",
-        "total_lessons": len(TUTORIAL_LESSONS),
-        "difficulty_levels": ["easy", "medium", "hard"]
+        "total_lessons": len(lessons),
+        "difficulty_levels": ["easy", "medium", "hard"],
+        "data_source": "supabase" if supabase_service.is_connected() else "fallback"
     }
 
 @router.get("/lessons")
@@ -52,9 +61,17 @@ async def get_lessons():
     """
     Obtener todas las lecciones del tutorial
     """
+    # Intentar obtener lecciones desde Supabase
+    lessons = await supabase_service.get_tutorial_lessons()
+    
+    # Si Supabase no está disponible, usar datos de respaldo
+    if not lessons:
+        lessons = FALLBACK_TUTORIAL_LESSONS
+    
     return {
-        "lessons": TUTORIAL_LESSONS,
-        "total": len(TUTORIAL_LESSONS)
+        "lessons": lessons,
+        "total": len(lessons),
+        "data_source": "supabase" if supabase_service.is_connected() else "fallback"
     }
 
 @router.get("/lessons/{lesson_id}")
@@ -62,10 +79,20 @@ async def get_lesson(lesson_id: int):
     """
     Obtener una lección específica
     """
-    lesson = next((l for l in TUTORIAL_LESSONS if l["id"] == lesson_id), None)
+    # Intentar obtener desde Supabase
+    lesson = await supabase_service.get_tutorial_lesson_by_number(lesson_id)
+    
+    # Si no se encuentra en Supabase, buscar en datos de respaldo
+    if not lesson:
+        lesson = next((l for l in FALLBACK_TUTORIAL_LESSONS if l["id"] == lesson_id), None)
+    
     if not lesson:
         raise HTTPException(status_code=404, detail="Lección no encontrada")
-    return lesson
+    
+    return {
+        **lesson,
+        "data_source": "supabase" if supabase_service.is_connected() and lesson else "fallback"
+    }
 
 @router.get("/lessons/difficulty/{difficulty}")
 async def get_lessons_by_difficulty(difficulty: str):
@@ -75,11 +102,18 @@ async def get_lessons_by_difficulty(difficulty: str):
     if difficulty not in ["easy", "medium", "hard"]:
         raise HTTPException(status_code=400, detail="Dificultad no válida. Use: easy, medium, hard")
     
-    lessons = [l for l in TUTORIAL_LESSONS if l["difficulty"] == difficulty]
+    # Intentar obtener desde Supabase
+    lessons = await supabase_service.get_tutorial_lessons_by_difficulty(difficulty)
+    
+    # Si Supabase no está disponible, usar datos de respaldo
+    if not lessons:
+        lessons = [l for l in FALLBACK_TUTORIAL_LESSONS if l["difficulty"] == difficulty]
+    
     return {
         "difficulty": difficulty,
         "lessons": lessons,
-        "total": len(lessons)
+        "total": len(lessons),
+        "data_source": "supabase" if supabase_service.is_connected() else "fallback"
     }
 
 @router.post("/lessons/{lesson_id}/complete")
@@ -87,14 +121,21 @@ async def complete_lesson(lesson_id: int):
     """
     Marcar una lección como completada
     """
-    lesson = next((l for l in TUTORIAL_LESSONS if l["id"] == lesson_id), None)
+    # Intentar obtener desde Supabase
+    lesson = await supabase_service.get_tutorial_lesson_by_number(lesson_id)
+    
+    # Si no se encuentra en Supabase, buscar en datos de respaldo
+    if not lesson:
+        lesson = next((l for l in FALLBACK_TUTORIAL_LESSONS if l["id"] == lesson_id), None)
+    
     if not lesson:
         raise HTTPException(status_code=404, detail="Lección no encontrada")
     
     # En una implementación real, guardaríamos esto en la base de datos
     return {
-        "message": f"Lección {lesson['name']} completada con éxito!",
+        "message": f"Lección {lesson.get('name', f'#{lesson_id}')} completada con éxito!",
         "lesson_id": lesson_id,
-        "letter": lesson["letter"],
-        "completed": True
+        "letter": lesson.get("letter", ""),
+        "completed": True,
+        "data_source": "supabase" if supabase_service.is_connected() and lesson else "fallback"
     }

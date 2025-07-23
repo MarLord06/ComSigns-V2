@@ -164,25 +164,13 @@ async def predict_letter_upload(file: UploadFile = File(...), session_id: str = 
 
 
 # Rutas del Tutorial
-@router.get("/tutorial/overview", response_model=TutorialOverviewResponse)
-async def get_tutorial_overview():
-    """
-    Obtener resumen del tutorial interactivo
-    """
-    try:
-        overview = tutorial_service.get_tutorial_overview()
-        return TutorialOverviewResponse(**overview)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error obteniendo resumen del tutorial: {str(e)}")
-
-
 @router.get("/tutorial/step/{step}", response_model=TutorialStepResponse)
 async def get_tutorial_step(step: int):
     """
     Obtener información de un paso específico del tutorial
     """
     try:
-        step_info = tutorial_service.get_tutorial_step(step)
+        step_info = await tutorial_service.get_tutorial_step(step)
         
         if "error" in step_info:
             raise HTTPException(status_code=404, detail="Paso del tutorial no encontrado")
@@ -192,6 +180,18 @@ async def get_tutorial_step(step: int):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error obteniendo paso del tutorial: {str(e)}")
+
+
+@router.get("/tutorial/overview", response_model=TutorialOverviewResponse)
+async def get_tutorial_overview():
+    """
+    Obtener resumen del tutorial interactivo
+    """
+    try:
+        overview = await tutorial_service.get_tutorial_overview()
+        return TutorialOverviewResponse(**overview)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo resumen del tutorial: {str(e)}")
 
 
 @router.post("/tutorial/progress", response_model=TutorialProgressResponse)

@@ -5,11 +5,12 @@ Practice routes for COMSIGNS
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict
 import random
+from app.core.supabase import supabase_service
 
 router = APIRouter()
 
-# Mock data for practice challenges (solo letras disponibles en el dataset original)
-PRACTICE_CHALLENGES = [
+# Datos de respaldo en caso de que Supabase no esté disponible
+FALLBACK_PRACTICE_CHALLENGES = [
     {"id": 1, "type": "recognition", "letter": "A", "description": "Identifica la letra A", "difficulty": "easy", "points": 10},
     {"id": 2, "type": "recognition", "letter": "B", "description": "Identifica la letra B", "difficulty": "easy", "points": 10},
     {"id": 3, "type": "recognition", "letter": "C", "description": "Identifica la letra C", "difficulty": "easy", "points": 10},
@@ -33,12 +34,20 @@ async def practice_root():
     """
     Endpoint raíz del modo práctica
     """
+    # Obtener desafíos desde Supabase
+    challenges = await supabase_service.get_practice_challenges()
+    
+    # Si Supabase no está disponible, usar datos de respaldo
+    if not challenges:
+        challenges = FALLBACK_PRACTICE_CHALLENGES
+    
     return {
         "message": "Modo Práctica COMSIGNS",
         "description": "Practica y mejora tus habilidades con el lenguaje de señas ecuatoriano",
         "challenge_types": ["recognition", "formation", "speed", "sequence"],
-        "total_challenges": len(PRACTICE_CHALLENGES),
-        "gamification": "Sistema de puntos, niveles y ranking"
+        "total_challenges": len(challenges),
+        "gamification": "Sistema de puntos, niveles y ranking",
+        "data_source": "supabase" if supabase_service.is_connected() else "fallback"
     }
 
 @router.get("/challenges")
@@ -46,9 +55,17 @@ async def get_challenges():
     """
     Obtener todos los desafíos de práctica
     """
+    # Obtener desafíos desde Supabase
+    challenges = await supabase_service.get_practice_challenges()
+    
+    # Si Supabase no está disponible, usar datos de respaldo
+    if not challenges:
+        challenges = FALLBACK_PRACTICE_CHALLENGES
+    
     return {
-        "challenges": PRACTICE_CHALLENGES,
-        "total": len(PRACTICE_CHALLENGES)
+        "challenges": challenges,
+        "total": len(challenges),
+        "data_source": "supabase" if supabase_service.is_connected() else "fallback"
     }
 
 @router.get("/challenges/random")
@@ -56,8 +73,17 @@ async def get_random_challenge():
     """
     Obtener un desafío aleatorio
     """
-    challenge = random.choice(PRACTICE_CHALLENGES)
-    return challenge
+    # Intentar obtener desde Supabase
+    challenge = await supabase_service.get_random_practice_challenge()
+    
+    # Si Supabase no está disponible, usar datos de respaldo
+    if not challenge:
+        challenge = random.choice(FALLBACK_PRACTICE_CHALLENGES)
+    
+    return {
+        **challenge,
+        "data_source": "supabase" if supabase_service.is_connected() else "fallback"
+    }
 
 @router.get("/challenges/difficulty/{difficulty}")
 async def get_challenges_by_difficulty(difficulty: str):
@@ -67,11 +93,18 @@ async def get_challenges_by_difficulty(difficulty: str):
     if difficulty not in ["easy", "medium", "hard"]:
         raise HTTPException(status_code=400, detail="Dificultad no válida. Use: easy, medium, hard")
     
-    challenges = [c for c in PRACTICE_CHALLENGES if c["difficulty"] == difficulty]
+    # Obtener desde Supabase
+    challenges = await supabase_service.get_practice_challenges_by_difficulty(difficulty)
+    
+    # Si Supabase no está disponible, usar datos de respaldo
+    if not challenges:
+        challenges = [c for c in FALLBACK_PRACTICE_CHALLENGES if c["difficulty"] == difficulty]
+    
     return {
         "difficulty": difficulty,
         "challenges": challenges,
-        "total": len(challenges)
+        "total": len(challenges),
+        "data_source": "supabase" if supabase_service.is_connected() else "fallback"
     }
 
 @router.get("/challenges/type/{challenge_type}")
@@ -82,11 +115,18 @@ async def get_challenges_by_type(challenge_type: str):
     if challenge_type not in ["recognition", "formation", "speed", "sequence"]:
         raise HTTPException(status_code=400, detail="Tipo no válido. Use: recognition, formation, speed, sequence")
     
-    challenges = [c for c in PRACTICE_CHALLENGES if c["type"] == challenge_type]
+    # Obtener desde Supabase
+    challenges = await supabase_service.get_practice_challenges_by_type(challenge_type)
+    
+    # Si Supabase no está disponible, usar datos de respaldo
+    if not challenges:
+        challenges = [c for c in FALLBACK_PRACTICE_CHALLENGES if c["type"] == challenge_type]
+    
     return {
         "type": challenge_type,
         "challenges": challenges,
-        "total": len(challenges)
+        "total": len(challenges),
+        "data_source": "supabase" if supabase_service.is_connected() else "fallback"
     }
 
 @router.post("/challenges/{challenge_id}/complete")
@@ -94,7 +134,14 @@ async def complete_challenge(challenge_id: int, score: int = 100):
     """
     Completar un desafío y obtener puntos
     """
-    challenge = next((c for c in PRACTICE_CHALLENGES if c["id"] == challenge_id), None)
+    # Obtener desafíos desde Supabase
+    challenges = await supabase_service.get_practice_challenges()
+    
+    # Si Supabase no está disponible, usar datos de respaldo
+    if not challenges:
+        challenges = FALLBACK_PRACTICE_CHALLENGES
+    
+    challenge = next((c for c in challenges if c.get("challenge_number", c.get("id")) == challenge_id), None)
     if not challenge:
         raise HTTPException(status_code=404, detail="Desafío no encontrado")
     
@@ -108,7 +155,8 @@ async def complete_challenge(challenge_id: int, score: int = 100):
         "score": score,
         "points_earned": earned_points,
         "total_possible": base_points,
-        "performance": "Excelente" if score >= 80 else "Bueno" if score >= 60 else "Puede mejorar"
+        "performance": "Excelente" if score >= 80 else "Bueno" if score >= 60 else "Puede mejorar",
+        "data_source": "supabase" if supabase_service.is_connected() else "fallback"
     }
 
 @router.get("/leaderboard")
@@ -126,18 +174,26 @@ async def get_practice_stats():
     """
     Obtener estadísticas del modo práctica
     """
+    # Obtener desafíos desde Supabase
+    challenges = await supabase_service.get_practice_challenges()
+    
+    # Si Supabase no está disponible, usar datos de respaldo
+    if not challenges:
+        challenges = FALLBACK_PRACTICE_CHALLENGES
+    
     return {
-        "total_challenges": len(PRACTICE_CHALLENGES),
+        "total_challenges": len(challenges),
         "challenges_by_difficulty": {
-            "easy": len([c for c in PRACTICE_CHALLENGES if c["difficulty"] == "easy"]),
-            "medium": len([c for c in PRACTICE_CHALLENGES if c["difficulty"] == "medium"]),
-            "hard": len([c for c in PRACTICE_CHALLENGES if c["difficulty"] == "hard"])
+            "easy": len([c for c in challenges if c["difficulty"] == "easy"]),
+            "medium": len([c for c in challenges if c["difficulty"] == "medium"]),
+            "hard": len([c for c in challenges if c["difficulty"] == "hard"])
         },
         "challenges_by_type": {
-            "recognition": len([c for c in PRACTICE_CHALLENGES if c["type"] == "recognition"]),
-            "formation": len([c for c in PRACTICE_CHALLENGES if c["type"] == "formation"]),
-            "speed": len([c for c in PRACTICE_CHALLENGES if c["type"] == "speed"]),
-            "sequence": len([c for c in PRACTICE_CHALLENGES if c["type"] == "sequence"])
+            "recognition": len([c for c in challenges if c["type"] == "recognition"]),
+            "formation": len([c for c in challenges if c["type"] == "formation"]),
+            "speed": len([c for c in challenges if c["type"] == "speed"]),
+            "sequence": len([c for c in challenges if c["type"] == "sequence"])
         },
-        "max_points_available": sum(c.get("points", 0) for c in PRACTICE_CHALLENGES)
+        "max_points_available": sum(c.get("points", 0) for c in challenges),
+        "data_source": "supabase" if supabase_service.is_connected() else "fallback"
     }

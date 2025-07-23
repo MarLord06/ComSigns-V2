@@ -20,14 +20,7 @@ class Settings(BaseSettings):
     
     # Entorno
     ENVIRONMENT: str = Field(default="development", env="ENVIRONMENT")
-    
-    # Base de datos
-    DATABASE_URL: Optional[str] = Field(default=None, env="DATABASE_URL")
-    DATABASE_URL_LOCAL: str = Field(
-        default="postgresql://postgres:postgres@localhost:5432/comsigns_dev",
-        env="DATABASE_URL_LOCAL"
-    )
-    
+        
     # Redis
     REDIS_URL: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
     
@@ -50,23 +43,11 @@ class Settings(BaseSettings):
     # Machine Learning
     MODEL_PATH: str = Field(default="/app/models/model.h5", env="MODEL_PATH")
     CONFIDENCE_THRESHOLD: float = Field(default=0.65, env="CONFIDENCE_THRESHOLD")
-    
-    # Arduino (opcional)
-    ARDUINO_PORT: Optional[str] = Field(default=None, env="ARDUINO_PORT")
-    ARDUINO_BAUDRATE: int = Field(default=9600, env="ARDUINO_BAUDRATE")
-    
+
     # Logging
     LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
     LOG_FORMAT: str = Field(default="JSON", env="LOG_FORMAT")
-    
-    @property
-    def database_url(self) -> str:
-        """
-        Retorna la URL de la base de datos apropiada según el entorno
-        """
-        if self.ENVIRONMENT == "production" and self.DATABASE_URL:
-            return self.DATABASE_URL
-        return self.DATABASE_URL_LOCAL
+
     
     @property
     def is_development(self) -> bool:

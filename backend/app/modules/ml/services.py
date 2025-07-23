@@ -187,12 +187,12 @@ class TutorialService:
             "V", "W", "X", "Y"
         ]
         
-        # Información detallada de cada letra
-        self.letters_info = self._get_letters_info()
+        # Información detallada de cada letra (fallback)
+        self.fallback_letters_info = self._get_fallback_letters_info()
     
-    def _get_letters_info(self) -> Dict[str, Dict[str, Any]]:
+    def _get_fallback_letters_info(self) -> Dict[str, Dict[str, Any]]:
         """
-        Información detallada de cada letra para el tutorial
+        Información detallada de cada letra para el tutorial (datos de respaldo)
         """
         return {
             "A": {
@@ -216,40 +216,88 @@ class TutorialService:
             # Agregar más letras según sea necesario...
         }
     
-    def get_tutorial_step(self, step: int) -> Dict[str, Any]:
+    async def get_tutorial_step(self, step: int) -> Dict[str, Any]:
         """
-        Obtener información del paso del tutorial
+        Obtener información del paso del tutorial desde Supabase o fallback
         """
         if step < 1 or step > len(self.learning_sequence):
             return {"error": "Paso inválido"}
         
-        letter = self.learning_sequence[step - 1]
-        letter_info = self.letters_info.get(letter, {})
+        # Importar el servicio de Supabase aquí para evitar importación circular
+        from app.core.supabase import supabase_service
         
-        return {
-            "step": step,
-            "total_steps": len(self.learning_sequence),
-            "letter": letter,
-            "description": letter_info.get("description", ""),
-            "difficulty": letter_info.get("difficulty", "medium"),
-            "tips": letter_info.get("tips", []),
-            "progress": round((step / len(self.learning_sequence)) * 100, 1)
-        }
-    
-    def get_tutorial_overview(self) -> Dict[str, Any]:
-        """
-        Obtener resumen del tutorial
-        """
-        return {
-            "total_steps": len(self.learning_sequence),
-            "letters": self.learning_sequence,
-            "estimated_time_minutes": len(self.learning_sequence) * 3,  # 3 min por letra
-            "difficulty_levels": {
-                "easy": sum(1 for letter in self.learning_sequence[:8]),
-                "medium": sum(1 for letter in self.learning_sequence[8:16]),
-                "hard": sum(1 for letter in self.learning_sequence[16:])
+        # Intentar obtener la lección desde Supabase
+        lesson = await supabase_service.get_tutorial_lesson_by_number(step)
+        
+        if lesson:
+            # Usar datos de Supabase
+            return {
+                "step": step,
+                "total_steps": len(self.learning_sequence),
+                "letter": lesson.get("letter", ""),
+                "description": lesson.get("description", ""),
+                "difficulty": lesson.get("difficulty", "medium"),
+                "tips": lesson.get("tips", []),
+                "progress": round((step / len(self.learning_sequence)) * 100, 1),
+                "data_source": "supabase"
             }
-        }
+        else:
+            # Usar datos de respaldo
+            letter = self.learning_sequence[step - 1]
+            letter_info = self.fallback_letters_info.get(letter, {})
+            
+            return {
+                "step": step,
+                "total_steps": len(self.learning_sequence),
+                "letter": letter,
+                "description": letter_info.get("description", f"Aprende la seña de la letra {letter}"),
+                "difficulty": letter_info.get("difficulty", "medium"),
+                "tips": letter_info.get("tips", []),
+                "progress": round((step / len(self.learning_sequence)) * 100, 1),
+                "data_source": "fallback"
+            }
+    
+    async def get_tutorial_overview(self) -> Dict[str, Any]:
+        """
+        Obtener resumen del tutorial desde Supabase o fallback
+        """
+        # Importar el servicio de Supabase aquí para evitar importación circular
+        from app.core.supabase import supabase_service
+        
+        # Intentar obtener lecciones desde Supabase
+        lessons = await supabase_service.get_tutorial_lessons()
+        
+        if lessons:
+            # Usar datos de Supabase
+            difficulty_counts = {"easy": 0, "medium": 0, "hard": 0}
+            letters = []
+            
+            for lesson in lessons:
+                difficulty = lesson.get("difficulty", "medium")
+                if difficulty in difficulty_counts:
+                    difficulty_counts[difficulty] += 1
+                letters.append(lesson.get("letter", ""))
+            
+            return {
+                "total_steps": len(lessons),
+                "letters": letters,
+                "estimated_time_minutes": len(lessons) * 3,  # 3 min por letra
+                "difficulty_levels": difficulty_counts,
+                "data_source": "supabase"
+            }
+        else:
+            # Usar datos de respaldo
+            return {
+                "total_steps": len(self.learning_sequence),
+                "letters": self.learning_sequence,
+                "estimated_time_minutes": len(self.learning_sequence) * 3,  # 3 min por letra
+                "difficulty_levels": {
+                    "easy": sum(1 for letter in self.learning_sequence[:8]),
+                    "medium": sum(1 for letter in self.learning_sequence[8:16]),
+                    "hard": sum(1 for letter in self.learning_sequence[16:])
+                },
+                "data_source": "fallback"
+            }
 
 
 class PracticeService:
