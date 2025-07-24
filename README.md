@@ -187,7 +187,7 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 
 - **Comunidad sordomuda ecuatoriana** por su invaluable feedback
 - **Fundación Nacional de Sordos del Ecuador** por su apoyo
-- **Universidad Técnica del Norte** por el respaldo académico
+- **Pontificia Universidad Catolica del Ecuador** por el respaldo académico
 - **Contributors Open Source** por sus aportes al proyecto
 
 ---
