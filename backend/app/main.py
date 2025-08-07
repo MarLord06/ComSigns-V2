@@ -19,11 +19,14 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json" if settings.ENVIRONMENT != "production" else None,
 )
 
+# Configurar contenedor de dependencias
+
 # Middleware de seguridad
 app.add_middleware(
     TrustedHostMiddleware, 
     allowed_hosts=["localhost", "127.0.0.1", "*.vercel.app"]
 )
+
 
 # Middleware CORS
 app.add_middleware(
@@ -63,6 +66,23 @@ async def health_check():
         "service": "comsigns-api",
         "version": settings.VERSION
     }
+
+@app.get("/metrics")
+async def get_metrics():
+    """
+    Endpoint para métricas de performance
+    """
+    # Obtener middleware de performance
+    performance_middleware = None
+    for middleware in app.user_middleware:
+        if isinstance(middleware.cls, type) and issubclass(middleware.cls):
+            performance_middleware = middleware.cls
+            break
+    
+    if performance_middleware and hasattr(performance_middleware, 'get_metrics_summary'):
+        return performance_middleware.get_metrics_summary()
+    
+    return {"message": "Performance metrics not available"}
 
 if __name__ == "__main__":
     import uvicorn

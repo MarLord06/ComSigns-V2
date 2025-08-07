@@ -117,7 +117,6 @@
 @layer theme {
   :root, :host {
     --color-red-50: oklch(97.1% .013 17.38);
-    --color-red-100: oklch(93.6% .032 17.717);
     --color-red-200: oklch(88.5% .062 18.334);
     --color-red-300: oklch(80.8% .114 19.571);
     --color-red-400: oklch(70.4% .191 22.216);
@@ -128,14 +127,11 @@
     --color-orange-50: oklch(98% .016 73.684);
     --color-orange-100: oklch(95.4% .038 75.164);
     --color-orange-200: oklch(90.1% .076 70.697);
-    --color-orange-500: oklch(70.5% .213 47.604);
     --color-orange-600: oklch(64.6% .222 41.116);
     --color-yellow-50: oklch(98.7% .026 102.212);
-    --color-yellow-100: oklch(97.3% .071 103.193);
     --color-yellow-400: oklch(85.2% .199 91.936);
     --color-yellow-500: oklch(79.5% .184 86.047);
     --color-yellow-600: oklch(68.1% .162 75.834);
-    --color-yellow-800: oklch(47.6% .114 61.907);
     --color-green-50: oklch(98.2% .018 155.826);
     --color-green-100: oklch(96.2% .044 156.743);
     --color-green-200: oklch(92.5% .084 155.995);
@@ -627,16 +623,8 @@
     margin-right: calc(var(--spacing) * 2);
   }
 
-  .mr-3 {
-    margin-right: calc(var(--spacing) * 3);
-  }
-
   .mr-4 {
     margin-right: calc(var(--spacing) * 4);
-  }
-
-  .mb-1 {
-    margin-bottom: calc(var(--spacing) * 1);
   }
 
   .mb-2 {
@@ -1352,16 +1340,8 @@
     background-color: var(--color-purple-500);
   }
 
-  .bg-purple-600 {
-    background-color: var(--color-purple-600);
-  }
-
   .bg-red-50 {
     background-color: var(--color-red-50);
-  }
-
-  .bg-red-100 {
-    background-color: var(--color-red-100);
   }
 
   .bg-red-400 {
@@ -1406,10 +1386,6 @@
     .bg-white\/95 {
       background-color: color-mix(in oklab, var(--color-white) 95%, transparent);
     }
-  }
-
-  .bg-yellow-100 {
-    background-color: var(--color-yellow-100);
   }
 
   .bg-yellow-400 {
@@ -1460,23 +1436,8 @@
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
 
-  .from-green-500 {
-    --tw-gradient-from: var(--color-green-500);
-    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
-  }
-
-  .from-orange-500 {
-    --tw-gradient-from: var(--color-orange-500);
-    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
-  }
-
   .from-purple-50 {
     --tw-gradient-from: var(--color-purple-50);
-    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
-  }
-
-  .from-purple-500 {
-    --tw-gradient-from: var(--color-purple-500);
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
 
@@ -1501,11 +1462,6 @@
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
 
-  .to-blue-600 {
-    --tw-gradient-to: var(--color-blue-600);
-    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
-  }
-
   .to-gray-50 {
     --tw-gradient-to: var(--color-gray-50);
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
@@ -1516,18 +1472,8 @@
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
 
-  .to-green-600 {
-    --tw-gradient-to: var(--color-green-600);
-    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
-  }
-
   .to-indigo-100 {
     --tw-gradient-to: var(--color-indigo-100);
-    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
-  }
-
-  .to-orange-600 {
-    --tw-gradient-to: var(--color-orange-600);
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
 
@@ -1937,10 +1883,6 @@
     color: var(--color-yellow-600);
   }
 
-  .text-yellow-800 {
-    color: var(--color-yellow-800);
-  }
-
   .capitalize {
     text-transform: capitalize;
   }
@@ -1968,10 +1910,6 @@
 
   .opacity-60 {
     opacity: .6;
-  }
-
-  .opacity-90 {
-    opacity: .9;
   }
 
   .shadow-2xl {
@@ -2007,10 +1945,6 @@
   .ring-2 {
     --tw-ring-shadow: var(--tw-ring-inset, ) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-  }
-
-  .ring-green-400 {
-    --tw-ring-color: var(--color-green-400);
   }
 
   .ring-green-500 {
@@ -2200,12 +2134,6 @@
   }
 
   @media (hover: hover) {
-    .hover\:bg-purple-700:hover {
-      background-color: var(--color-purple-700);
-    }
-  }
-
-  @media (hover: hover) {
     .hover\:bg-red-700:hover {
       background-color: var(--color-red-700);
     }
@@ -2384,10 +2312,6 @@
 
   .focus\:ring-blue-500:focus {
     --tw-ring-color: var(--color-blue-500);
-  }
-
-  .focus\:ring-purple-500:focus {
-    --tw-ring-color: var(--color-purple-500);
   }
 
   .focus\:ring-offset-2:focus {

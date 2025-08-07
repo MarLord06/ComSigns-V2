@@ -6,7 +6,7 @@ import base64
 import json
 import uuid
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, WebSocket
 
 from app.core.supabase import supabase_service
 from app.core.config import settings
@@ -46,13 +46,15 @@ async def get_model_info():
         raise HTTPException(status_code=500, detail=f"Error obteniendo información del modelo: {str(e)}")
 
 
-@router.post("/predict", response_model=PredictionResponse)
-async def predict_letter(request: PredictionRequest, http_request: Request):
+@router.websocket("/predict")
+async def predict_letter(websocket: WebSocket, http_request: Request):
     """
     Predecir letra basada en imagen de seña
     """
     try:
         # Obtener session_id
+        ws = await websocket.accept()
+        data = await websocket.receive_text()
         session_id = get_or_create_session_id(http_request)
         
         # Crear sesión de usuario si es necesario
@@ -65,7 +67,7 @@ async def predict_letter(request: PredictionRequest, http_request: Request):
         
         # Decodificar imagen base64
         try:
-            image_data = base64.b64decode(request.image_data)
+            image_data = base64.b64decode(data.image_data)
         except Exception:
             raise HTTPException(status_code=400, detail="Imagen base64 inválida")
         
