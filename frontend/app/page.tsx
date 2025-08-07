@@ -3,6 +3,8 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { AuthButton } from "@/components/auth"
+import { useAuth } from "@/lib/auth-context"
 import {
   ArrowRight,
   Brain,
@@ -17,6 +19,7 @@ import {
   Play,
   Target,
   Gamepad2,
+  BarChart3,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -24,6 +27,7 @@ import { useState } from "react"
 
 export default function LandingPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { user, profile, loading } = useAuth()
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -51,7 +55,7 @@ export default function LandingPage() {
         >
           <Menu className="h-5 w-5" />
         </Button>
-        <nav className="ml-auto flex gap-4 sm:gap-6">
+        <nav className="ml-auto flex gap-4 sm:gap-6 items-center">
           <Link href="#about" className="text-sm font-medium hover:text-blue-600 transition-colors">
             Nosotros
           </Link>
@@ -64,6 +68,11 @@ export default function LandingPage() {
           <Link href="#contact" className="text-sm font-medium hover:text-blue-600 transition-colors">
             Contacto
           </Link>
+          
+          {/* Botón de autenticación / Dashboard */}
+          <div className="ml-4">
+            <AuthButton />
+          </div>
         </nav>
       </header>
 
@@ -162,13 +171,26 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700" aria-describedby="cta-description">
-                    Probar Ahora
-                    <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
-                  </Button>
-                  <Button variant="outline" size="lg" aria-label="Ver demostración del sistema ComSigns">
-                    Ver Demo
-                  </Button>
+                  {user ? (
+                    <Link href="/dashboard">
+                      <Button size="lg" className="bg-blue-600 hover:bg-blue-700" aria-describedby="cta-description">
+                        Ir al Dashboard
+                        <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Link href="/auth/register">
+                      <Button size="lg" className="bg-blue-600 hover:bg-blue-700" aria-describedby="cta-description">
+                        Probar Ahora
+                        <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                      </Button>
+                    </Link>
+                  )}
+                  <Link href="/translate">
+                    <Button variant="outline" size="lg" aria-label="Ver demostración del sistema ComSigns">
+                      Ver Demo
+                    </Button>
+                  </Link>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <div className="flex items-center gap-1">
@@ -199,6 +221,75 @@ export default function LandingPage() {
         <div id="cta-description" className="sr-only">
           Acceder al sistema de traducción de lenguaje de señas ComSigns
         </div>
+
+        {/* Sección especial para usuarios autenticados */}
+        {user && profile && (
+          <section className="w-full py-12 bg-gradient-to-r from-blue-600 to-purple-600">
+            <div className="container px-4 md:px-6">
+              <div className="text-center text-white mb-8">
+                <h2 className="text-3xl font-bold mb-4">
+                  ¡Hola de nuevo, {profile.full_name}! 👋
+                </h2>
+                <p className="text-xl text-blue-100">
+                  Continúa tu aprendizaje desde donde lo dejaste
+                </p>
+              </div>
+              
+              <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <Card className="text-center hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <BarChart3 className="h-12 w-12 text-blue-600 mx-auto mb-2" />
+                    <CardTitle>Dashboard</CardTitle>
+                    <CardDescription>
+                      Ve tu progreso y estadísticas
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Link href="/dashboard">
+                      <Button className="w-full">
+                        Ver Dashboard
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+
+                <Card className="text-center hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <Target className="h-12 w-12 text-green-600 mx-auto mb-2" />
+                    <CardTitle>Práctica</CardTitle>
+                    <CardDescription>
+                      Mejora tus habilidades
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Link href="/practice">
+                      <Button variant="outline" className="w-full">
+                        Practicar
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+
+                <Card className="text-center hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <Play className="h-12 w-12 text-purple-600 mx-auto mb-2" />
+                    <CardTitle>Traductor</CardTitle>
+                    <CardDescription>
+                      Traduce en tiempo real
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Link href="/translate">
+                      <Button variant="outline" className="w-full">
+                        Traducir
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* About Section */}
         <section id="about" className="w-full py-12 md:py-24 lg:py-32" aria-labelledby="about-heading">
