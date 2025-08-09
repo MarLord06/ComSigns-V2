@@ -7,6 +7,7 @@ import json
 import uuid
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, WebSocket
+from fastapi import WebSocketDisconnect  # añadido para manejar desconexiones
 
 from app.core.supabase import supabase_service
 from app.core.config import settings
@@ -34,6 +35,16 @@ def get_or_create_session_id(request: Request) -> str:
     
     return session_id
 
+# Nuevo helper para WebSocket
+def get_or_create_session_id_ws(websocket: WebSocket) -> str:
+    """
+    Obtener o crear un session_id único para WebSocket
+    """
+    session_id = websocket.headers.get("x-session-id") or websocket.headers.get("X-Session-ID")
+    if not session_id:
+        session_id = str(uuid.uuid4())
+    return session_id
+
 @router.get("/model/info", response_model=ModelInfoResponse)
 async def get_model_info():
     """
@@ -47,80 +58,161 @@ async def get_model_info():
 
 
 @router.websocket("/predict")
-async def predict_letter(websocket: WebSocket, http_request: Request):
+async def predict_letter(websocket: WebSocket):
     """
     Predecir letra basada en imagen de seña
     """
+    # Obtener session_id
+    await websocket.accept()
+    session_id = get_or_create_session_id_ws(websocket)
+
+    # Crear sesión de usuario (si procede)
+    if supabase_service.is_connected():
+        await supabase_service.create_user_session({
+            "session_id": session_id,
+            "user_agent": websocket.headers.get("user-agent") or websocket.headers.get("User-Agent"),
+            "ip_address": str(websocket.client.host) if websocket.client else None
+        })
+
+    # Enviar mensaje inicial de sesión
+    await websocket.send_json({
+        "type": "session",
+        "session_id": session_id,
+        "message": "connected"
+    })
+
     try:
-        # Obtener session_id
-        ws = await websocket.accept()
-        data = await websocket.receive_text()
-        session_id = get_or_create_session_id(http_request)
-        
-        # Crear sesión de usuario si es necesario
-        if supabase_service.is_connected():
-            await supabase_service.create_user_session({
-                "session_id": session_id,
-                "user_agent": http_request.headers.get("User-Agent"),
-                "ip_address": str(http_request.client.host) if http_request.client else None
-            })
-        
-        # Decodificar imagen base64
-        try:
-            image_data = base64.b64decode(data.image_data)
-        except Exception:
-            raise HTTPException(status_code=400, detail="Imagen base64 inválida")
-        
-        # Procesar landmarks
-        landmarks = ml_service.process_landmarks(image_data)
-        
-        if landmarks is None:
-            # Guardar predicción fallida en Supabase
+        while True:
+            try:
+                raw_msg = await websocket.receive_text()
+            except WebSocketDisconnect:
+                break
+
+            # Intentar parsear JSON
+            try:
+                payload = json.loads(raw_msg)
+            except json.JSONDecodeError:
+                await websocket.send_json({
+                    "type": "error",
+                    "error": "Formato JSON inválido",
+                    "session_id": session_id
+                })
+                continue
+
+            msg_type = payload.get("type")
+
+            if msg_type == "ping":
+                await websocket.send_json({
+                    "type": "pong",
+                    "timestamp": uuid.uuid4().hex  # simple token de respuesta
+                })
+                continue
+
+            if msg_type != "frame":
+                await websocket.send_json({
+                    "type": "error",
+                    "error": "Tipo de mensaje no soportado",
+                    "session_id": session_id
+                })
+                continue
+
+            # Obtener imagen base64
+            b64_image = payload.get("image")
+            if not b64_image:
+                await websocket.send_json({
+                    "type": "error",
+                    "error": "Campo 'image' requerido",
+                    "session_id": session_id
+                })
+                continue
+
+            # Remover encabezado data URL si existe
+            if b64_image.startswith("data:"):
+                try:
+                    b64_image = b64_image.split(",", 1)[1]
+                except Exception:
+                    await websocket.send_json({
+                        "type": "error",
+                        "error": "Formato data URL inválido",
+                        "session_id": session_id
+                    })
+                    continue
+
+            # Decodificar
+            try:
+                image_data = base64.b64decode(b64_image)
+            except Exception:
+                await websocket.send_json({
+                    "type": "error",
+                    "error": "Imagen base64 inválida",
+                    "session_id": session_id
+                })
+                continue
+
+            # Procesar landmarks
+            landmarks = ml_service.process_landmarks(image_data)
+
+            if landmarks is None:
+                # Guardar intento fallido
+                if supabase_service.is_connected():
+                    await supabase_service.save_prediction({
+                        "session_id": session_id,
+                        "predicted_letter": "",
+                        "confidence": 0.0,
+                        "processing_time_ms": 0.0,
+                        "landmarks_data": [],
+                        "status": "no_hand_detected"
+                    })
+
+                await websocket.send_json({
+                    "type": "prediction",
+                    "letter": "",
+                    "confidence": 0.0,
+                    "processing_time_ms": 0.0,
+                    "status": "no_hand_detected",
+                    "landmarks_detected": False,
+                    "session_id": session_id
+                })
+                continue
+
+            # Predicción
+            result = ml_service.predict_letter(landmarks)
+
+            # Persistir
             if supabase_service.is_connected():
                 await supabase_service.save_prediction({
                     "session_id": session_id,
-                    "predicted_letter": "",
-                    "confidence": 0.0,
-                    "processing_time_ms": 0.0,
-                    "landmarks_data": [],
-                    "status": "no_hand_detected"
+                    "predicted_letter": result["letter"],
+                    "confidence": result["confidence"],
+                    "processing_time_ms": result["processing_time_ms"],
+                    "landmarks_data": landmarks.tolist(),
+                    "status": result["status"]
                 })
-            
-            return PredictionResponse(
-                letter="",
-                confidence=0.0,
-                processing_time_ms=0.0,
-                status="no_hand_detected",
-                landmarks_detected=False
-            )
-        
-        # Hacer predicción
-        result = ml_service.predict_letter(landmarks)
-        
-        # Guardar predicción en Supabase
-        if supabase_service.is_connected():
-            await supabase_service.save_prediction({
-                "session_id": session_id,
-                "predicted_letter": result["letter"],
+
+            await websocket.send_json({
+                "type": "prediction",
+                "letter": result["letter"],
                 "confidence": result["confidence"],
                 "processing_time_ms": result["processing_time_ms"],
-                "landmarks_data": landmarks.tolist(),
-                "status": result["status"]
+                "status": result["status"],
+                "landmarks_detected": True,
+                "session_id": session_id
             })
-        
-        response = PredictionResponse(
-            letter=result["letter"],
-            confidence=result["confidence"],
-            processing_time_ms=result["processing_time_ms"],
-            status=result["status"],
-            landmarks_detected=True
-        )
-        
-        # Agregar session_id a la respuesta en headers
-        return response
-        
+
+    except WebSocketDisconnect:
+        # Desconexión normal
+        pass
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error en predicción: {str(e)}")
+        await websocket.send_json({
+            "type": "error",
+            "error": f"Error interno: {str(e)}",
+            "session_id": session_id
+        })
+        # Opcional: cerrar el socket
+        try:
+            await websocket.close()
+        except Exception:
+            pass
 
 
 @router.post("/predict/upload", response_model=PredictionResponse)

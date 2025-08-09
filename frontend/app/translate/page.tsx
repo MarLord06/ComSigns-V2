@@ -54,19 +54,28 @@ export default function TranslatePage() {
 
   // Handlers
   const handleToggleCamera = async () => {
+    console.log('[TRANSLATE] Toggle camera:', !isCameraActive);
     setIsCameraActive(!isCameraActive);
     
     // Si se desactiva la cámara, también detener la traducción
     if (isCameraActive && isTranslating) {
+      console.log('[TRANSLATE] Deteniendo traducción por cámara desactivada');
       stopRealtimeTranslation();
     }
   };
 
   const handleToggleTranslation = () => {
+    console.log('[TRANSLATE] Toggle translation, current isTranslating:', isTranslating);
+    console.log('[TRANSLATE] cameraRef.current existe:', !!cameraRef.current);
+    console.log('[TRANSLATE] isCameraActive:', isCameraActive);
     if (isTranslating) {
       stopRealtimeTranslation();
     } else {
+      if (!isCameraActive) {
+        console.warn('[TRANSLATE] Cámara no está activa, la traducción puede no funcionar');
+      }
       // Pasar el cameraRef completo al hook
+      console.log('[TRANSLATE] Iniciando traducción, cameraRef.current:', !!cameraRef.current);
       startRealtimeTranslation(cameraRef);
       setTranslationCount(prev => prev + 1);
     }

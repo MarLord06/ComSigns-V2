@@ -1,4 +1,4 @@
-(globalThis.TURBOPACK = globalThis.TURBOPACK || []).push(["static/chunks/_54b4fb56._.js", {
+(globalThis.TURBOPACK = globalThis.TURBOPACK || []).push(["static/chunks/_0f9763c2._.js", {
 
 "[project]/lib/utils.ts [app-client] (ecmascript)": ((__turbopack_context__) => {
 "use strict";
@@ -3024,7 +3024,7 @@ __turbopack_context__.s({
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/build/polyfills/process.js [app-client] (ecmascript)");
 // Configuración del API
 // API Configuration
-const API_BASE_URL = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+const API_BASE_URL = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].env.NEXT_PUBLIC_API_BASE || ("TURBOPACK compile-time value", "http://localhost:8000") || 'http://localhost:8000';
 const DEFAULT_TIMEOUT = 10000; // 10 segundos
 // Cliente HTTP personalizado
 class APIClient {
@@ -3131,6 +3131,342 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
     __turbopack_context__.k.registerExports(module, globalThis.$RefreshHelpers$);
 }
 }}),
+"[project]/lib/types/realtime.ts [app-client] (ecmascript)": ((__turbopack_context__) => {
+"use strict";
+
+var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
+{
+// Tipos para protocolo WebSocket de predicción en tiempo real
+__turbopack_context__.s({
+    "CONFIDENCE_THRESHOLDS": (()=>CONFIDENCE_THRESHOLDS),
+    "classifyConfidence": (()=>classifyConfidence),
+    "mapPredictionMessage": (()=>mapPredictionMessage)
+});
+const CONFIDENCE_THRESHOLDS = {
+    ACCEPT: 0.6,
+    STRONG: 0.8,
+    LOW: 0.4
+};
+function classifyConfidence(c) {
+    if (c >= CONFIDENCE_THRESHOLDS.STRONG) return 'high';
+    if (c >= CONFIDENCE_THRESHOLDS.ACCEPT) return 'medium';
+    return 'low';
+}
+function mapPredictionMessage(msg) {
+    return {
+        letter: msg.letter || '',
+        confidence: msg.confidence ?? 0,
+        processingTimeMs: msg.processing_time_ms ?? 0,
+        hasLandmarks: !!msg.landmarks_detected,
+        raw: msg
+    };
+}
+if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
+    __turbopack_context__.k.registerExports(module, globalThis.$RefreshHelpers$);
+}
+}}),
+"[project]/lib/services/realtime.service.ts [app-client] (ecmascript)": ((__turbopack_context__) => {
+"use strict";
+
+var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
+{
+__turbopack_context__.s({
+    "RealtimePredictionWS": (()=>RealtimePredictionWS)
+});
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/build/polyfills/process.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$types$2f$realtime$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/types/realtime.ts [app-client] (ecmascript)");
+;
+const DEFAULTS = {
+    autoReconnect: true,
+    maxReconnectAttempts: 10,
+    backoffInitialMs: 500,
+    backoffFactor: 2,
+    backoffMaxMs: 5000,
+    heartbeatIntervalMs: 20000,
+    heartbeatTimeoutMs: 5000,
+    log: false
+};
+class RealtimePredictionWS {
+    ws = null;
+    opts;
+    url;
+    status = 'idle';
+    listeners = {};
+    reconnectAttempts = 0;
+    heartbeatTimer = null;
+    heartbeatTimeout = null;
+    sessionId = null;
+    constructor(options = {}){
+        const apiBase = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+        const wsBase = options.url || (apiBase.startsWith('https') ? apiBase.replace('https', 'wss') : apiBase.replace('http', 'ws'));
+        this.url = wsBase.replace(/\/$/, '') + '/api/v1/ml/predict';
+        this.opts = {
+            ...DEFAULTS,
+            ...options
+        };
+    }
+    getStatus() {
+        return this.status;
+    }
+    getSessionId() {
+        return this.sessionId;
+    }
+    on(event, cb) {
+        const arr = this.listeners[event] || [];
+        arr.push(cb);
+        this.listeners[event] = arr;
+        return ()=>{
+            const list = this.listeners[event] || [];
+            this.listeners[event] = list.filter((l)=>l !== cb);
+        };
+    }
+    emit(event, ...args) {
+        this.listeners[event]?.forEach((l)=>{
+            try {
+                l(...args);
+            } catch (e) {
+                if (this.opts.log) console.error('[Realtime] listener error', e);
+            }
+        });
+    }
+    connect() {
+        if (this.ws && (this.status === 'open' || this.status === 'connecting')) return;
+        this.status = this.reconnectAttempts > 0 ? 'reconnecting' : 'connecting';
+        try {
+            this.ws = new WebSocket(this.url);
+        } catch (e) {
+            this.status = 'error';
+            this.emit('error', e);
+            return;
+        }
+        this.ws.onopen = ()=>{
+            this.status = 'open';
+            this.emit('open');
+            this.reconnectAttempts = 0;
+            this.startHeartbeat();
+        };
+        this.ws.onmessage = (ev)=>{
+            let parsed;
+            try {
+                parsed = JSON.parse(ev.data);
+            } catch  {
+                return;
+            }
+            this.emit('raw', parsed);
+            switch(parsed.type){
+                case 'session':
+                    this.sessionId = parsed.session_id;
+                    this.emit('session', this.sessionId);
+                    break;
+                case 'prediction':
+                    {
+                        const p = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$types$2f$realtime$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["mapPredictionMessage"])(parsed);
+                        this.emit('prediction', p);
+                        break;
+                    }
+                case 'pong':
+                    this.clearHeartbeatTimeout();
+                    break;
+                case 'error':
+                    this.emit('error', parsed.error);
+                    break;
+                default:
+                    break;
+            }
+        };
+        this.ws.onerror = (e)=>{
+            this.emit('error', e);
+        };
+        this.ws.onclose = (e)=>{
+            this.stopHeartbeat();
+            this.emit('close', e);
+            if (this.status !== 'closing') {
+                this.status = 'error';
+                if (this.opts.autoReconnect && this.reconnectAttempts < this.opts.maxReconnectAttempts) {
+                    this.scheduleReconnect();
+                }
+            }
+        };
+    }
+    scheduleReconnect() {
+        this.reconnectAttempts += 1;
+        const delay = Math.min(this.opts.backoffInitialMs * Math.pow(this.opts.backoffFactor, this.reconnectAttempts - 1), this.opts.backoffMaxMs);
+        this.emit('reconnect', this.reconnectAttempts, delay);
+        setTimeout(()=>this.connect(), delay);
+    }
+    startHeartbeat() {
+        if (this.opts.heartbeatIntervalMs <= 0) return;
+        this.stopHeartbeat();
+        this.heartbeatTimer = setInterval(()=>{
+            if (this.ws && this.status === 'open') {
+                this.sendPing();
+                this.setHeartbeatTimeout();
+            }
+        }, this.opts.heartbeatIntervalMs);
+    }
+    stopHeartbeat() {
+        if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+        this.heartbeatTimer = null;
+        this.clearHeartbeatTimeout();
+    }
+    setHeartbeatTimeout() {
+        this.clearHeartbeatTimeout();
+        this.heartbeatTimeout = setTimeout(()=>{
+            if (this.opts.log) console.warn('[Realtime] Heartbeat timeout - forcing reconnect');
+            this.forceReconnect();
+        }, this.opts.heartbeatTimeoutMs);
+    }
+    clearHeartbeatTimeout() {
+        if (this.heartbeatTimeout) clearTimeout(this.heartbeatTimeout);
+        this.heartbeatTimeout = null;
+    }
+    forceReconnect() {
+        if (this.ws) {
+            try {
+                this.ws.close();
+            } catch  {}
+        }
+    }
+    sendFrame(base64Image) {
+        if (!this.ws || this.status !== 'open') return;
+        const msg = {
+            type: 'frame',
+            image: base64Image,
+            timestamp: Date.now()
+        };
+        this.ws.send(JSON.stringify(msg));
+    }
+    sendPing() {
+        if (!this.ws || this.status !== 'open') return;
+        const msg = {
+            type: 'ping',
+            timestamp: Date.now()
+        };
+        this.ws.send(JSON.stringify(msg));
+    }
+    close() {
+        this.status = 'closing';
+        this.stopHeartbeat();
+        if (this.ws) {
+            try {
+                this.ws.close();
+            } catch  {}
+        }
+        this.ws = null;
+        this.status = 'idle';
+    }
+}
+if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
+    __turbopack_context__.k.registerExports(module, globalThis.$RefreshHelpers$);
+}
+}}),
+"[project]/lib/hooks/use-realtime-prediction.ts [app-client] (ecmascript)": ((__turbopack_context__) => {
+"use strict";
+
+var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
+{
+__turbopack_context__.s({
+    "useRealtimePrediction": (()=>useRealtimePrediction)
+});
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$services$2f$realtime$2e$service$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/services/realtime.service.ts [app-client] (ecmascript)");
+var _s = __turbopack_context__.k.signature();
+;
+;
+function useRealtimePrediction(opts = {}) {
+    _s();
+    const serviceRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const [status, setStatus] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('idle');
+    const [lastPrediction, setLastPrediction] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [sessionId, setSessionId] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [reconnectInfo, setReconnectInfo] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    if (!serviceRef.current) {
+        serviceRef.current = new __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$services$2f$realtime$2e$service$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["RealtimePredictionWS"]({
+            log: opts.log
+        });
+    }
+    const connect = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useRealtimePrediction.useCallback[connect]": ()=>{
+            serviceRef.current?.connect();
+        }
+    }["useRealtimePrediction.useCallback[connect]"], []);
+    const disconnect = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useRealtimePrediction.useCallback[disconnect]": ()=>{
+            serviceRef.current?.close();
+            setStatus('idle');
+        }
+    }["useRealtimePrediction.useCallback[disconnect]"], []);
+    const sendFrame = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useRealtimePrediction.useCallback[sendFrame]": (base64)=>{
+            serviceRef.current?.sendFrame(base64);
+        }
+    }["useRealtimePrediction.useCallback[sendFrame]"], []);
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "useRealtimePrediction.useEffect": ()=>{
+            const svc = serviceRef.current;
+            const offOpen = svc.on('open', {
+                "useRealtimePrediction.useEffect.offOpen": ()=>{
+                    setStatus('open');
+                    setError(null);
+                }
+            }["useRealtimePrediction.useEffect.offOpen"]);
+            const offClose = svc.on('close', {
+                "useRealtimePrediction.useEffect.offClose": ()=>{
+                    setStatus('idle');
+                }
+            }["useRealtimePrediction.useEffect.offClose"]);
+            const offErr = svc.on('error', {
+                "useRealtimePrediction.useEffect.offErr": (e)=>{
+                    setError(typeof e === 'string' ? e : 'Realtime error');
+                    setStatus('error');
+                }
+            }["useRealtimePrediction.useEffect.offErr"]);
+            const offSess = svc.on('session', {
+                "useRealtimePrediction.useEffect.offSess": (id)=>setSessionId(id)
+            }["useRealtimePrediction.useEffect.offSess"]);
+            const offPred = svc.on('prediction', {
+                "useRealtimePrediction.useEffect.offPred": (p)=>setLastPrediction(p)
+            }["useRealtimePrediction.useEffect.offPred"]);
+            const offReconnect = svc.on('reconnect', {
+                "useRealtimePrediction.useEffect.offReconnect": (attempt, delayMs)=>{
+                    setStatus('reconnecting');
+                    setReconnectInfo({
+                        attempt,
+                        delayMs
+                    });
+                }
+            }["useRealtimePrediction.useEffect.offReconnect"]);
+            if (opts.autoConnect) connect();
+            return ({
+                "useRealtimePrediction.useEffect": ()=>{
+                    offOpen();
+                    offClose();
+                    offErr();
+                    offSess();
+                    offPred();
+                    offReconnect();
+                }
+            })["useRealtimePrediction.useEffect"];
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }
+    }["useRealtimePrediction.useEffect"], []);
+    return {
+        status,
+        lastPrediction,
+        sessionId,
+        error,
+        reconnectInfo,
+        connect,
+        disconnect,
+        sendFrame
+    };
+}
+_s(useRealtimePrediction, "Im2TcGsLwotPA8bkoyC6ueK0uEE=");
+if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
+    __turbopack_context__.k.registerExports(module, globalThis.$RefreshHelpers$);
+}
+}}),
 "[project]/lib/hooks/use-auth-redirect.ts [app-client] (ecmascript)": ((__turbopack_context__) => {
 "use strict";
 
@@ -3181,15 +3517,333 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
     __turbopack_context__.k.registerExports(module, globalThis.$RefreshHelpers$);
 }
 }}),
-"[project]/lib/hooks/index.ts [app-client] (ecmascript) <locals>": (function(__turbopack_context__) {
+"[project]/lib/hooks/index.ts [app-client] (ecmascript) <locals>": ((__turbopack_context__) => {
+"use strict";
 
-var { g: global, __dirname, k: __turbopack_refresh__, m: module, e: exports } = __turbopack_context__;
+var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
 {
-const e = new Error(`Could not parse module '[project]/lib/hooks/index.ts'
-
-Unexpected eof`);
-e.code = 'MODULE_UNPARSEABLE';
-throw e;}}),
+/**
+ * Custom hooks para funcionalidades reutilizables
+ */ __turbopack_context__.s({
+    "useCamera": (()=>useCamera),
+    "useTranslation": (()=>useTranslation)
+});
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$services$2f$translation$2e$service$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/services/translation.service.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$use$2d$realtime$2d$prediction$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/hooks/use-realtime-prediction.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$types$2f$realtime$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/types/realtime.ts [app-client] (ecmascript)");
+var _s = __turbopack_context__.k.signature(), _s1 = __turbopack_context__.k.signature();
+;
+;
+;
+;
+;
+function useCamera() {
+    _s();
+    // ...existing code (estados básicos)...
+    const [isSupported, setIsSupported] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [permission, setPermission] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('prompt');
+    const [isInitializing, setIsInitializing] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const videoRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const streamRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const [isTranslating, setIsTranslating] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [currentPrediction, setCurrentPrediction] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const [confidence, setConfidence] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(0);
+    const [lastTranslation, setLastTranslation] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const canvasRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const intervalRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    // Nuevo hook de realtime desacoplado
+    const { status: realtimeStatus, lastPrediction: realtimePrediction, error: realtimeError, connect: connectRealtime, disconnect: disconnectRealtime, sendFrame } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$use$2d$realtime$2d$prediction$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRealtimePrediction"])({
+        autoConnect: false
+    });
+    // Sincronizar errores
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "useCamera.useEffect": ()=>{
+            if (realtimeError) setError(realtimeError);
+        }
+    }["useCamera.useEffect"], [
+        realtimeError
+    ]);
+    // Aplicar predicción entrante
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "useCamera.useEffect": ()=>{
+            if (!realtimePrediction) return;
+            const letter = realtimePrediction.letter || '';
+            const conf = realtimePrediction.confidence || 0;
+            if (conf >= __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$types$2f$realtime$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CONFIDENCE_THRESHOLDS"].ACCEPT && letter) {
+                setCurrentPrediction(letter);
+            } else if (!letter) {
+                setCurrentPrediction('?');
+            }
+            setConfidence(conf);
+            setLastTranslation({
+                success: true,
+                method: 'websocket_prediction',
+                result: {
+                    text: letter || '?',
+                    confidence: conf,
+                    processing_time_ms: realtimePrediction.processingTimeMs || 0,
+                    signs_detected: realtimePrediction.hasLandmarks ? 1 : 0,
+                    detailed_predictions: []
+                }
+            });
+        }
+    }["useCamera.useEffect"], [
+        realtimePrediction
+    ]);
+    // Verificar soporte de cámara
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "useCamera.useEffect": ()=>{
+            setIsSupported(typeof navigator !== 'undefined' && 'mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices);
+        }
+    }["useCamera.useEffect"], []);
+    const initialize = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useCamera.useCallback[initialize]": async ()=>{
+            if (!isSupported) {
+                setError('Camera not supported in this browser');
+                return false;
+            }
+            try {
+                setIsInitializing(true);
+                setError('');
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: {
+                            ideal: 640
+                        },
+                        height: {
+                            ideal: 480
+                        },
+                        facingMode: 'user'
+                    }
+                });
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    streamRef.current = stream;
+                }
+                setPermission('granted');
+                return true;
+            } catch (err) {
+                const e = err;
+                setError(e.message || 'Camera access failed');
+                setPermission('denied');
+                return false;
+            } finally{
+                setIsInitializing(false);
+            }
+        }
+    }["useCamera.useCallback[initialize]"], [
+        isSupported
+    ]);
+    // Capturar y enviar frame base64 al servicio realtime
+    const captureAndSendFrame = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useCamera.useCallback[captureAndSendFrame]": (cameraViewRef)=>{
+            if (!isTranslating) return;
+            if (!cameraViewRef?.current) return;
+            try {
+                const videoElement = cameraViewRef.current.getVideoElement?.() || videoRef.current;
+                if (!videoElement) return;
+                if (videoElement.readyState < 2) return; // metadata no lista
+                if (!canvasRef.current) canvasRef.current = document.createElement('canvas');
+                const canvas = canvasRef.current;
+                canvas.width = videoElement.videoWidth || 640;
+                canvas.height = videoElement.videoHeight || 480;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return;
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                const base64 = dataUrl.split(',')[1];
+                if (base64) sendFrame(base64);
+            } catch (e) {
+            // silencioso para no inundar logs
+            }
+        }
+    }["useCamera.useCallback[captureAndSendFrame]"], [
+        isTranslating,
+        sendFrame
+    ]);
+    const startRealtimeTranslation = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useCamera.useCallback[startRealtimeTranslation]": (cameraViewRef)=>{
+            if (isTranslating) return;
+            connectRealtime();
+            setIsTranslating(true);
+            setCurrentPrediction('');
+            setConfidence(0);
+            intervalRef.current = setInterval({
+                "useCamera.useCallback[startRealtimeTranslation]": ()=>captureAndSendFrame(cameraViewRef)
+            }["useCamera.useCallback[startRealtimeTranslation]"], 200);
+        }
+    }["useCamera.useCallback[startRealtimeTranslation]"], [
+        isTranslating,
+        connectRealtime,
+        captureAndSendFrame
+    ]);
+    const stopRealtimeTranslation = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useCamera.useCallback[stopRealtimeTranslation]": ()=>{
+            if (!isTranslating) return;
+            setIsTranslating(false);
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+            disconnectRealtime();
+        }
+    }["useCamera.useCallback[stopRealtimeTranslation]"], [
+        isTranslating,
+        disconnectRealtime
+    ]);
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "useCamera.useEffect": ()=>({
+                "useCamera.useEffect": ()=>{
+                    if (intervalRef.current) clearInterval(intervalRef.current);
+                }
+            })["useCamera.useEffect"]
+    }["useCamera.useEffect"], []);
+    const cleanup = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useCamera.useCallback[cleanup]": ()=>{
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach({
+                    "useCamera.useCallback[cleanup]": (t)=>t.stop()
+                }["useCamera.useCallback[cleanup]"]);
+                streamRef.current = null;
+            }
+            if (videoRef.current) videoRef.current.srcObject = null;
+            stopRealtimeTranslation();
+            setPermission('prompt');
+            setError('');
+        }
+    }["useCamera.useCallback[cleanup]"], [
+        stopRealtimeTranslation
+    ]);
+    const captureFrame = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useCamera.useCallback[captureFrame]": ()=>{
+            if (!videoRef.current) return Promise.resolve(null);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return Promise.resolve(null);
+            canvas.width = videoRef.current.videoWidth;
+            canvas.height = videoRef.current.videoHeight;
+            ctx.drawImage(videoRef.current, 0, 0);
+            return new Promise({
+                "useCamera.useCallback[captureFrame]": (res)=>{
+                    canvas.toBlob({
+                        "useCamera.useCallback[captureFrame]": (b)=>{
+                            b ? res(new File([
+                                b
+                            ], 'frame.jpg', {
+                                type: 'image/jpeg'
+                            })) : res(null);
+                        }
+                    }["useCamera.useCallback[captureFrame]"], 'image/jpeg', 0.8);
+                }
+            }["useCamera.useCallback[captureFrame]"]);
+        }
+    }["useCamera.useCallback[captureFrame]"], []);
+    return {
+        // Cámara
+        videoRef,
+        isSupported,
+        permission,
+        isInitializing,
+        error,
+        initialize,
+        cleanup,
+        captureFrame,
+        // Realtime
+        isTranslating,
+        currentPrediction,
+        confidence,
+        lastTranslation,
+        startRealtimeTranslation,
+        stopRealtimeTranslation,
+        // Estado WS (expuesto opcionalmente)
+        realtimeStatus
+    };
+}
+_s(useCamera, "SqNCeq/r2TxJUkSBHNLOVYq6fzs=", false, function() {
+    return [
+        __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$use$2d$realtime$2d$prediction$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRealtimePrediction"]
+    ];
+});
+function useTranslation() {
+    _s1();
+    const [isActive, setIsActive] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [result, setResult] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const [isProcessing, setIsProcessing] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [history, setHistory] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
+    const intervalRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const translateFrame = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useTranslation.useCallback[translateFrame]": async (frame)=>{
+            try {
+                setIsProcessing(true);
+                setError('');
+                const response = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$services$2f$translation$2e$service$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["translationService"].translateFrame(frame);
+                setResult(response);
+                // Agregar al historial si la confianza es alta
+                if (response.result && response.result.confidence > 0.7) {
+                    setHistory({
+                        "useTranslation.useCallback[translateFrame]": (prev)=>[
+                                response,
+                                ...prev.slice(0, 9)
+                            ]
+                    }["useTranslation.useCallback[translateFrame]"]); // Últimas 10
+                }
+                return response;
+            } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : 'Translation failed';
+                setError(errorMessage);
+                throw err;
+            } finally{
+                setIsProcessing(false);
+            }
+        }
+    }["useTranslation.useCallback[translateFrame]"], []);
+    const startRealTimeTranslation = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useTranslation.useCallback[startRealTimeTranslation]": (captureFrame, interval = 1000)=>{
+            if (isActive) return;
+            setIsActive(true);
+            intervalRef.current = setInterval({
+                "useTranslation.useCallback[startRealTimeTranslation]": async ()=>{
+                    const frame = await captureFrame();
+                    if (frame) {
+                        try {
+                            await translateFrame(frame);
+                        } catch  {}
+                    }
+                }
+            }["useTranslation.useCallback[startRealTimeTranslation]"], interval);
+        }
+    }["useTranslation.useCallback[startRealTimeTranslation]"], [
+        isActive,
+        translateFrame
+    ]);
+    const stopRealTimeTranslation = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useTranslation.useCallback[stopRealTimeTranslation]": ()=>{
+            setIsActive(false);
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+        }
+    }["useTranslation.useCallback[stopRealTimeTranslation]"], []);
+    return {
+        isActive,
+        result,
+        error,
+        isProcessing,
+        history,
+        translateFrame,
+        startRealTimeTranslation,
+        stopRealTimeTranslation
+    };
+}
+_s1(useTranslation, "C/7lsK9SlyqXb81dGuSer2DTzpU=");
+if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
+    __turbopack_context__.k.registerExports(module, globalThis.$RefreshHelpers$);
+}
+}}),
 "[project]/lib/hooks/index.ts [app-client] (ecmascript) <module evaluation>": ((__turbopack_context__) => {
 "use strict";
 
@@ -3198,6 +3852,21 @@ var { g: global, __dirname } = __turbopack_context__;
 __turbopack_context__.s({});
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$services$2f$translation$2e$service$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/services/translation.service.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$use$2d$realtime$2d$prediction$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/hooks/use-realtime-prediction.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$types$2f$realtime$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/types/realtime.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$use$2d$auth$2d$redirect$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/hooks/use-auth-redirect.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/lib/hooks/index.ts [app-client] (ecmascript) <locals>");
+}}),
+"[project]/lib/hooks/index.ts [app-client] (ecmascript) <exports>": ((__turbopack_context__) => {
+"use strict";
+
+var { g: global, __dirname } = __turbopack_context__;
+{
+__turbopack_context__.s({
+    "useAuthRedirect": (()=>__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$use$2d$auth$2d$redirect$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuthRedirect"]),
+    "useCamera": (()=>__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$locals$3e$__["useCamera"]),
+    "useTranslation": (()=>__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$locals$3e$__["useTranslation"])
+});
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$use$2d$auth$2d$redirect$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/hooks/use-auth-redirect.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/lib/hooks/index.ts [app-client] (ecmascript) <locals>");
 }}),
@@ -3298,6 +3967,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$layout$2f$app$
 var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$layout$2f$hero$2d$section$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/components/layout/hero-section.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$module__evaluation$3e$__ = __turbopack_context__.i("[project]/lib/hooks/index.ts [app-client] (ecmascript) <module evaluation>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/lib/hooks/index.ts [app-client] (ecmascript) <locals>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$exports$3e$__ = __turbopack_context__.i("[project]/lib/hooks/index.ts [app-client] (ecmascript) <exports>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/components/ui/alert.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$circle$2d$alert$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__AlertCircle$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/circle-alert.js [app-client] (ecmascript) <export default as AlertCircle>");
 ;
@@ -3317,7 +3987,7 @@ function TranslatePage() {
     // Custom hooks para gestión de estado
     const { // Nuevas funciones de tiempo real
     isTranslating, currentPrediction, confidence, lastTranslation, startRealtimeTranslation, stopRealtimeTranslation } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$locals$3e$__["useCamera"])();
-    const { isConnected: isBackendConnected } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$locals$3e$__["useBackendConnection"])();
+    const { isConnected: isBackendConnected } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$exports$3e$__["useBackendConnection"])();
     // Variables derivadas para compatibilidad con el componente
     const translationResult = lastTranslation;
     const translationError = '';
@@ -3452,7 +4122,7 @@ function TranslatePage() {
 _s(TranslatePage, "46NVY0hLTaGgDq+QWU0Lmsk/p9o=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$locals$3e$__["useCamera"],
-        __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$locals$3e$__["useBackendConnection"]
+        __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$hooks$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$exports$3e$__["useBackendConnection"]
     ];
 });
 _c = TranslatePage;
@@ -3464,4 +4134,4 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 }}),
 }]);
 
-//# sourceMappingURL=_54b4fb56._.js.map
+//# sourceMappingURL=_0f9763c2._.js.map
