@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { AppLayout } from "@/components/layout"
 import {
   Hand,
-  Menu,
   X,
   Play,
   Target,
@@ -105,7 +105,6 @@ const CHALLENGES: Challenge[] = [
 ]
 
 export default function PracticePage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null)
   const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null)
   const [isRecording, setIsRecording] = useState(false)
@@ -394,109 +393,21 @@ export default function PracticePage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
-      {/* Skip Link */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-purple-600 focus:text-white focus:rounded-md focus:shadow-lg"
-      >
-        Saltar al contenido principal
-      </a>
-
-      {/* Header */}
-      <header className="px-4 lg:px-6 h-16 flex items-center border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
-        <Link href="/" className="flex items-center justify-center">
-          <Hand className="h-8 w-8 text-purple-600" />
-          <span className="ml-2 text-xl font-bold text-gray-900">ComSigns</span>
-        </Link>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setSidebarOpen(true)}
-          className="ml-4"
-          aria-label="Abrir menú de navegación principal"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-        <div className="ml-auto flex items-center gap-4">
-          <Badge className="bg-purple-100 text-purple-800 flex items-center gap-1">
-            <Trophy className="h-3 w-3" />
-            {totalStars} estrellas
-          </Badge>
-          <Link href="/" className="text-sm font-medium hover:text-purple-600 transition-colors">
-            Inicio
-          </Link>
-        </div>
-      </header>
-
-      {/* Sidebar */}
-      <div
-        id="sidebar-nav"
-        role="navigation"
-        aria-label="Menú principal de funcionalidades"
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 ease-in-out motion-reduce:transition-none`}
-      >
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-2">
-            <Hand className="h-6 w-6 text-purple-600" />
-            <span className="font-bold text-gray-900">ComSigns</span>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)}>
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-        <nav className="p-4 space-y-2">
-          <Link
-            href="/translate"
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-blue-50 transition-colors group"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <Play className="h-5 w-5 text-blue-600" />
-            <div>
-              <div className="font-medium text-gray-900">Traductor Live</div>
-              <div className="text-sm text-gray-600">Traducción en tiempo real</div>
-            </div>
-          </Link>
-          <Link
-            href="/practice"
-            className="flex items-center gap-3 p-3 rounded-lg bg-purple-50 border-l-4 border-purple-600"
-            onClick={() => setSidebarOpen(false)}
-            aria-current="page"
-          >
-            <Target className="h-5 w-5 text-purple-600" />
-            <div>
-              <div className="font-medium text-purple-900">Zona de Entrenamiento</div>
-              <div className="text-sm text-purple-700">Practica y mejora tus señas</div>
-            </div>
-          </Link>
-          <Link
-            href="/game"
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-green-50 transition-colors group"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <Gamepad2 className="h-5 w-5 text-green-600" />
-            <div>
-              <div className="font-medium text-gray-900">SignChallenge</div>
-              <div className="text-sm text-gray-600">Aprende jugando</div>
-            </div>
-          </Link>
-        </nav>
-      </div>
-
-      {/* Overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      <main className="flex-1 p-4 md:p-6" id="main-content" role="main">
-        <div className="max-w-7xl mx-auto">
-          {/* Page Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <Target className="h-8 w-8 text-purple-600" />
-              <h1 className="text-3xl font-bold text-gray-900">Zona de Entrenamiento</h1>
-            </div>
-            <p className="text-gray-600 mb-6">
+    <AppLayout currentPage="practice">
+      <div className="bg-gradient-to-br from-purple-50 via-white to-blue-50 min-h-screen">
+        <main className="p-4 md:p-6" id="main-content" role="main">
+          <div className="max-w-7xl mx-auto">
+            {/* Page Header */}
+            <div className="mb-8">
+              <div className="flex items-center gap-3 mb-4">
+                <Target className="h-8 w-8 text-purple-600" />
+                <h1 className="text-3xl font-bold text-gray-900">Zona de Entrenamiento</h1>
+                <Badge className="bg-purple-100 text-purple-800 flex items-center gap-1 ml-auto">
+                  <Trophy className="h-3 w-3" />
+                  {totalStars} estrellas
+                </Badge>
+              </div>
+              <p className="text-gray-600 mb-6">
               Aprende el alfabeto en lenguaje de señas paso a paso. Completa desafíos para desbloquear nuevas letras.
             </p>
 
@@ -641,6 +552,7 @@ export default function PracticePage() {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+    </AppLayout>
   )
 }

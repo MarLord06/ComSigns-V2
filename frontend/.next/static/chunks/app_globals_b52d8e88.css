@@ -32,7 +32,6 @@
     --color-green-600: oklch(62.7% .194 149.214);
     --color-green-700: oklch(52.7% .154 150.069);
     --color-green-800: oklch(44.8% .119 151.328);
-    --color-green-900: oklch(39.3% .095 152.535);
     --color-blue-50: oklch(97% .014 254.604);
     --color-blue-100: oklch(93.2% .032 255.585);
     --color-blue-200: oklch(88.2% .059 254.128);
@@ -53,7 +52,6 @@
     --color-purple-600: oklch(55.8% .288 302.321);
     --color-purple-700: oklch(49.6% .265 301.924);
     --color-purple-800: oklch(43.8% .218 303.724);
-    --color-purple-900: oklch(38.1% .176 304.987);
     --color-gray-50: oklch(98.5% .002 247.839);
     --color-gray-100: oklch(96.7% .003 264.542);
     --color-gray-200: oklch(92.8% .006 264.531);
@@ -1065,10 +1063,6 @@
     border-color: var(--color-green-300);
   }
 
-  .border-green-600 {
-    border-color: var(--color-green-600);
-  }
-
   .border-orange-200 {
     border-color: var(--color-orange-200);
   }
@@ -1079,10 +1073,6 @@
 
   .border-purple-200 {
     border-color: var(--color-purple-200);
-  }
-
-  .border-purple-600 {
-    border-color: var(--color-purple-600);
   }
 
   .border-red-200 {
@@ -1710,16 +1700,8 @@
     color: var(--color-green-600);
   }
 
-  .text-green-700 {
-    color: var(--color-green-700);
-  }
-
   .text-green-800 {
     color: var(--color-green-800);
-  }
-
-  .text-green-900 {
-    color: var(--color-green-900);
   }
 
   .text-muted-foreground {
@@ -1742,16 +1724,8 @@
     color: var(--color-purple-600);
   }
 
-  .text-purple-700 {
-    color: var(--color-purple-700);
-  }
-
   .text-purple-800 {
     color: var(--color-purple-800);
-  }
-
-  .text-purple-900 {
-    color: var(--color-purple-900);
   }
 
   .text-red-400 {
@@ -2155,18 +2129,6 @@
   }
 
   @media (hover: hover) {
-    .hover\:text-green-600:hover {
-      color: var(--color-green-600);
-    }
-  }
-
-  @media (hover: hover) {
-    .hover\:text-purple-600:hover {
-      color: var(--color-purple-600);
-    }
-  }
-
-  @media (hover: hover) {
     .hover\:text-white:hover {
       color: var(--color-white);
     }
@@ -2233,14 +2195,6 @@
 
   .focus\:bg-blue-600:focus {
     background-color: var(--color-blue-600);
-  }
-
-  .focus\:bg-green-600:focus {
-    background-color: var(--color-green-600);
-  }
-
-  .focus\:bg-purple-600:focus {
-    background-color: var(--color-purple-600);
   }
 
   .focus\:px-4:focus {
