@@ -6,7 +6,10 @@ module.exports = {
 var { g: global, __dirname } = __turbopack_context__;
 {
 __turbopack_context__.s({
-    "cn": (()=>cn)
+    "cn": (()=>cn),
+    "formatConfidence": (()=>formatConfidence),
+    "formatDecimal": (()=>formatDecimal),
+    "formatPercentage": (()=>formatPercentage)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$clsx$2f$dist$2f$clsx$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/clsx/dist/clsx.mjs [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$tailwind$2d$merge$2f$dist$2f$bundle$2d$mjs$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/tailwind-merge/dist/bundle-mjs.mjs [app-ssr] (ecmascript)");
@@ -14,6 +17,16 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$tailwind$2d$
 ;
 function cn(...inputs) {
     return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$tailwind$2d$merge$2f$dist$2f$bundle$2d$mjs$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["twMerge"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$clsx$2f$dist$2f$clsx$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["clsx"])(inputs));
+}
+function formatDecimal(num, decimals = 2) {
+    return Number(num.toFixed(decimals));
+}
+function formatPercentage(value, decimals = 2, isAlreadyPercentage = false) {
+    const percentValue = isAlreadyPercentage ? value : value * 100;
+    return `${formatDecimal(percentValue, decimals)}%`;
+}
+function formatConfidence(confidence, decimals = 2) {
+    return formatPercentage(confidence, decimals, false);
 }
 }}),
 "[project]/components/ui/card.tsx [app-ssr] (ecmascript)": ((__turbopack_context__) => {
@@ -449,6 +462,8 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$badge$2e
 var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$progress$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/components/ui/progress.tsx [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$clock$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Clock$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/clock.js [app-ssr] (ecmascript) <export default as Clock>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$hand$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Hand$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/hand.js [app-ssr] (ecmascript) <export default as Hand>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/utils.ts [app-ssr] (ecmascript)");
+;
 ;
 ;
 ;
@@ -468,19 +483,19 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                 className: "animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"
                             }, void 0, false, {
                                 fileName: "[project]/components/translation/translation-result.tsx",
-                                lineNumber: 33,
+                                lineNumber: 34,
                                 columnNumber: 13
                             }, this),
                             "Traduciendo en tiempo real..."
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/translation/translation-result.tsx",
-                        lineNumber: 32,
+                        lineNumber: 33,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/components/translation/translation-result.tsx",
-                    lineNumber: 31,
+                    lineNumber: 32,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -493,7 +508,7 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                 children: currentPrediction || '?'
                             }, void 0, false, {
                                 fileName: "[project]/components/translation/translation-result.tsx",
-                                lineNumber: 40,
+                                lineNumber: 41,
                                 columnNumber: 13
                             }, this),
                             confidence > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -507,24 +522,21 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                                 children: "Confianza:"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/translation/translation-result.tsx",
-                                                lineNumber: 46,
+                                                lineNumber: 47,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                 className: "font-medium",
-                                                children: [
-                                                    (confidence * 100).toFixed(1),
-                                                    "%"
-                                                ]
-                                            }, void 0, true, {
+                                                children: (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["formatConfidence"])(confidence)
+                                            }, void 0, false, {
                                                 fileName: "[project]/components/translation/translation-result.tsx",
-                                                lineNumber: 47,
+                                                lineNumber: 48,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/translation/translation-result.tsx",
-                                        lineNumber: 45,
+                                        lineNumber: 46,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$progress$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Progress"], {
@@ -532,30 +544,30 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                         className: "w-full"
                                     }, void 0, false, {
                                         fileName: "[project]/components/translation/translation-result.tsx",
-                                        lineNumber: 49,
+                                        lineNumber: 50,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/translation/translation-result.tsx",
-                                lineNumber: 44,
+                                lineNumber: 45,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/translation/translation-result.tsx",
-                        lineNumber: 39,
+                        lineNumber: 40,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/components/translation/translation-result.tsx",
-                    lineNumber: 37,
+                    lineNumber: 38,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/components/translation/translation-result.tsx",
-            lineNumber: 30,
+            lineNumber: 31,
             columnNumber: 7
         }, this);
     }
@@ -571,30 +583,30 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                             className: "h-12 w-12 mx-auto mb-4"
                         }, void 0, false, {
                             fileName: "[project]/components/translation/translation-result.tsx",
-                            lineNumber: 63,
+                            lineNumber: 64,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                             children: "Muestra tu mano para comenzar la traducción"
                         }, void 0, false, {
                             fileName: "[project]/components/translation/translation-result.tsx",
-                            lineNumber: 64,
+                            lineNumber: 65,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/translation/translation-result.tsx",
-                    lineNumber: 62,
+                    lineNumber: 63,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/components/translation/translation-result.tsx",
-                lineNumber: 61,
+                lineNumber: 62,
                 columnNumber: 9
             }, this)
         }, void 0, false, {
             fileName: "[project]/components/translation/translation-result.tsx",
-            lineNumber: 60,
+            lineNumber: 61,
             columnNumber: 7
         }, this);
     }
@@ -607,7 +619,7 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                 children: "Éxito"
             }, void 0, false, {
                 fileName: "[project]/components/translation/translation-result.tsx",
-                lineNumber: 75,
+                lineNumber: 76,
                 columnNumber: 14
             }, this);
         } else {
@@ -616,7 +628,7 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                 children: "Sin detección"
             }, void 0, false, {
                 fileName: "[project]/components/translation/translation-result.tsx",
-                lineNumber: 77,
+                lineNumber: 78,
                 columnNumber: 14
             }, this);
         }
@@ -632,19 +644,19 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                             children: "Resultado de Traducción"
                         }, void 0, false, {
                             fileName: "[project]/components/translation/translation-result.tsx",
-                            lineNumber: 85,
+                            lineNumber: 86,
                             columnNumber: 11
                         }, this),
                         getStatusBadge(result.success)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/translation/translation-result.tsx",
-                    lineNumber: 84,
+                    lineNumber: 85,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/components/translation/translation-result.tsx",
-                lineNumber: 83,
+                lineNumber: 84,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -659,7 +671,7 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                     children: result.result.text || '?'
                                 }, void 0, false, {
                                     fileName: "[project]/components/translation/translation-result.tsx",
-                                    lineNumber: 94,
+                                    lineNumber: 95,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -667,13 +679,13 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                     children: "Texto detectado"
                                 }, void 0, false, {
                                     fileName: "[project]/components/translation/translation-result.tsx",
-                                    lineNumber: 97,
+                                    lineNumber: 98,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/translation/translation-result.tsx",
-                            lineNumber: 93,
+                            lineNumber: 94,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -686,23 +698,20 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                             children: "Confianza"
                                         }, void 0, false, {
                                             fileName: "[project]/components/translation/translation-result.tsx",
-                                            lineNumber: 103,
+                                            lineNumber: 104,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                            children: [
-                                                (result.result.confidence * 100).toFixed(1),
-                                                "%"
-                                            ]
-                                        }, void 0, true, {
+                                            children: (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["formatConfidence"])(result.result.confidence)
+                                        }, void 0, false, {
                                             fileName: "[project]/components/translation/translation-result.tsx",
-                                            lineNumber: 104,
+                                            lineNumber: 105,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/translation/translation-result.tsx",
-                                    lineNumber: 102,
+                                    lineNumber: 103,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$progress$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Progress"], {
@@ -710,13 +719,13 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                     className: "h-2"
                                 }, void 0, false, {
                                     fileName: "[project]/components/translation/translation-result.tsx",
-                                    lineNumber: 106,
+                                    lineNumber: 107,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/translation/translation-result.tsx",
-                            lineNumber: 101,
+                            lineNumber: 102,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -729,7 +738,7 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                             className: "h-4 w-4 text-muted-foreground"
                                         }, void 0, false, {
                                             fileName: "[project]/components/translation/translation-result.tsx",
-                                            lineNumber: 115,
+                                            lineNumber: 116,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -739,13 +748,13 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/translation/translation-result.tsx",
-                                            lineNumber: 116,
+                                            lineNumber: 117,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/translation/translation-result.tsx",
-                                    lineNumber: 114,
+                                    lineNumber: 115,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -755,7 +764,7 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                             className: "h-4 w-4 text-muted-foreground"
                                         }, void 0, false, {
                                             fileName: "[project]/components/translation/translation-result.tsx",
-                                            lineNumber: 119,
+                                            lineNumber: 120,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -765,19 +774,19 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/components/translation/translation-result.tsx",
-                                            lineNumber: 120,
+                                            lineNumber: 121,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/translation/translation-result.tsx",
-                                    lineNumber: 118,
+                                    lineNumber: 119,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/translation/translation-result.tsx",
-                            lineNumber: 113,
+                            lineNumber: 114,
                             columnNumber: 13
                         }, this),
                         result.result.detailed_predictions && result.result.detailed_predictions.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -788,7 +797,7 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                     children: "Predicciones detalladas:"
                                 }, void 0, false, {
                                     fileName: "[project]/components/translation/translation-result.tsx",
-                                    lineNumber: 127,
+                                    lineNumber: 128,
                                     columnNumber: 17
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -801,34 +810,31 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                                                     children: pred.sign
                                                 }, void 0, false, {
                                                     fileName: "[project]/components/translation/translation-result.tsx",
-                                                    lineNumber: 131,
+                                                    lineNumber: 132,
                                                     columnNumber: 23
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                    children: [
-                                                        (pred.confidence * 100).toFixed(1),
-                                                        "%"
-                                                    ]
-                                                }, void 0, true, {
+                                                    children: (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["formatConfidence"])(pred.confidence)
+                                                }, void 0, false, {
                                                     fileName: "[project]/components/translation/translation-result.tsx",
-                                                    lineNumber: 132,
+                                                    lineNumber: 133,
                                                     columnNumber: 23
                                                 }, this)
                                             ]
                                         }, index, true, {
                                             fileName: "[project]/components/translation/translation-result.tsx",
-                                            lineNumber: 130,
+                                            lineNumber: 131,
                                             columnNumber: 21
                                         }, this))
                                 }, void 0, false, {
                                     fileName: "[project]/components/translation/translation-result.tsx",
-                                    lineNumber: 128,
+                                    lineNumber: 129,
                                     columnNumber: 17
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/translation/translation-result.tsx",
-                            lineNumber: 126,
+                            lineNumber: 127,
                             columnNumber: 15
                         }, this)
                     ]
@@ -838,23 +844,23 @@ function TranslationResult({ result, isProcessing, className, currentPrediction 
                         children: result.message || 'No se detectaron señales válidas'
                     }, void 0, false, {
                         fileName: "[project]/components/translation/translation-result.tsx",
-                        lineNumber: 141,
+                        lineNumber: 142,
                         columnNumber: 13
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/components/translation/translation-result.tsx",
-                    lineNumber: 140,
+                    lineNumber: 141,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/components/translation/translation-result.tsx",
-                lineNumber: 89,
+                lineNumber: 90,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/components/translation/translation-result.tsx",
-        lineNumber: 82,
+        lineNumber: 83,
         columnNumber: 5
     }, this);
 }
@@ -4850,6 +4856,7 @@ var { g: global, __dirname } = __turbopack_context__;
 {
 /**
  * useGameMode - Hook para manejar el estado del modo juego
+ * 🆕 NUEVA ARQUITECTURA: Sistema de registro por lotes (Batch Recording)
  */ __turbopack_context__.s({
     "useGameMode": (()=>useGameMode)
 });
@@ -4889,9 +4896,8 @@ function useGameMode() {
     const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
     // Timer ref
     const timerRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
-    // Protección contra registros duplicados
-    const lastAttemptRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
-    const attemptCounterRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(0); // 🆕 Contador para debugging
+    // 🆕 ACUMULADOR DE INTENTOS - Para registro por lotes
+    const pendingAttemptsRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])([]);
     // ========================================
     // TIMER MANAGEMENT
     // ========================================
@@ -4921,26 +4927,90 @@ function useGameMode() {
             timerRef.current = null;
         }
     }, []);
+    // ========================================
+    // BATCH ATTEMPT RECORDING SYSTEM
+    // ========================================
+    // 🆕 NUEVO: Agregar intento al acumulador (sin enviar al backend)
+    const addPendingAttempt = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])((targetWord, predictedWord, isCorrect)=>{
+        if (!currentSession) {
+            console.warn('[GAME_MODE] No hay sesión activa para acumular intento');
+            return;
+        }
+        const attempt = {
+            targetWord,
+            predictedWord,
+            isCorrect,
+            timestamp: Date.now(),
+            wordIndex: gameProgress.currentWordIndex
+        };
+        pendingAttemptsRef.current.push(attempt);
+        console.log(`[GAME_MODE] 📦 INTENTO ACUMULADO: ${targetWord} → ${predictedWord} (${isCorrect ? '✓' : '✗'})`);
+        console.log(`[GAME_MODE] 📋 Total intentos acumulados: ${pendingAttemptsRef.current.length}`);
+    }, [
+        currentSession,
+        gameProgress.currentWordIndex
+    ]);
+    // 🆕 NUEVO: Enviar todos los intentos acumulados al backend
+    const submitAllAttempts = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(async ()=>{
+        if (!currentSession || pendingAttemptsRef.current.length === 0) {
+            console.log('[GAME_MODE] 📭 Sin intentos pendientes para enviar');
+            return;
+        }
+        const attempts = pendingAttemptsRef.current;
+        console.log(`[GAME_MODE] 🚀 ENVIANDO LOTE DE ${attempts.length} INTENTOS AL BACKEND...`);
+        try {
+            // Enviar todos los intentos como lote
+            for (const [index, attempt] of attempts.entries()){
+                console.log(`[GAME_MODE] 📝 Enviando intento ${index + 1}/${attempts.length}: ${attempt.targetWord} → ${attempt.predictedWord}`);
+                await gamificationService.recordAttempt({
+                    session_id: currentSession.session_id,
+                    target_letter: attempt.targetWord.charAt(0) || 'A',
+                    predicted_letter: attempt.predictedWord.charAt(0) || 'A',
+                    is_correct: attempt.isCorrect,
+                    confidence: 0.95,
+                    time_taken: 1000,
+                    word_index: attempt.wordIndex,
+                    target_word: attempt.targetWord,
+                    predicted_word: attempt.predictedWord
+                });
+                // Pequeño delay entre requests para evitar saturar el backend
+                await new Promise((resolve)=>setTimeout(resolve, 100));
+            }
+            console.log(`[GAME_MODE] ✅ TODOS LOS INTENTOS ENVIADOS EXITOSAMENTE (${attempts.length})`);
+            // Limpiar acumulador después del envío exitoso
+            pendingAttemptsRef.current = [];
+        } catch (error) {
+            console.error(`[GAME_MODE] ❌ ERROR ENVIANDO LOTE DE INTENTOS:`, error);
+        // No limpiar el acumulador en caso de error, para poder reintentar
+        }
+    }, [
+        currentSession,
+        gamificationService
+    ]);
     // Stop timer when time runs out
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
         if (gameProgress.timeRemaining === 0 && gameState === 'playing') {
             console.log('[GAME_MODE] ⏰ TIMEOUT - Tiempo agotado, procesando como respuesta incorrecta');
-            // Llamada directa para evitar dependencia circular
-            if (currentWord) {
-                setGameProgress((prev)=>({
-                        ...prev,
-                        lives: prev.lives - 1,
-                        streak: 0,
-                        timeRemaining: currentLevel?.time_limit || 30
-                    }));
-                // Solo registrar si hay sesión activa
-                if (currentSession) {
-                    recordAttempt(currentWord, '', false).catch(console.error);
-                }
-                // Check game over
-                if (gameProgress.lives - 1 <= 0) {
-                    setGameState('game-over');
-                }
+            // 🛡️ PROTECCIÓN: No procesar timeout si ya no quedan vidas
+            if (gameProgress.lives <= 0) {
+                console.warn('[GAME_MODE] 🛡️ IGNORANDO timeout - Sin vidas restantes:', gameProgress.lives);
+                return;
+            }
+            // 📝 TIMEOUT: Acumular intento incorrecto por tiempo agotado
+            if (currentWord && currentSession) {
+                addPendingAttempt(currentWord, '', false);
+            }
+            setGameProgress((prev)=>({
+                    ...prev,
+                    lives: Math.max(0, prev.lives - 1),
+                    streak: 0,
+                    timeRemaining: currentLevel?.time_limit || 30
+                }));
+            // 🎯 DISPARADOR: Verificar game over por timeout
+            const newLives = Math.max(0, gameProgress.lives - 1);
+            if (newLives <= 0) {
+                console.log('[GAME_MODE] 💀 GAME OVER por timeout - Sin vidas restantes');
+                setTimeout(()=>setGameState('game-over'), 0);
             }
         }
     }, [
@@ -4949,7 +5019,8 @@ function useGameMode() {
         gameProgress.lives,
         currentWord,
         currentLevel,
-        currentSession
+        currentSession,
+        addPendingAttempt
     ]);
     // ========================================
     // GAME ACTIONS
@@ -4965,7 +5036,9 @@ function useGameMode() {
         } finally{
             setIsLoading(false);
         }
-    }, []);
+    }, [
+        gamificationService
+    ]);
     const selectLevel = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(async (levelId)=>{
         const level = levels.find((l)=>l.id === levelId);
         if (!level) {
@@ -4983,7 +5056,6 @@ function useGameMode() {
         setError(null);
         try {
             console.log('[GAME_MODE] Starting game with levelId:', levelId);
-            console.log('[GAME_MODE] Available levels:', levels);
             const level = levels.find((l)=>l.id === levelId);
             if (!level) {
                 console.error('[GAME_MODE] Level not found. Available levels:', levels.map((l)=>({
@@ -4995,6 +5067,8 @@ function useGameMode() {
             console.log('[GAME_MODE] Found level:', level);
             // Start session in backend with user ID
             const session = await gamificationService.startGameSession(levelId, user?.id);
+            // 🗑️ Limpiar acumulador para nueva partida
+            pendingAttemptsRef.current = [];
             // Initialize game state
             setCurrentLevel(level);
             setCurrentSession(session);
@@ -5014,7 +5088,9 @@ function useGameMode() {
         }
     }, [
         levels,
-        startTimer
+        startTimer,
+        gamificationService,
+        user?.id
     ]);
     const pauseGame = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(()=>{
         if (gameState === 'playing') {
@@ -5052,8 +5128,8 @@ function useGameMode() {
         if (nextIndex < currentWords.length) {
             setCurrentWord(currentWords[nextIndex]);
         } else {
-            // Game completed
-            endGame(true);
+            // Game completed - será manejado por endGame
+            setTimeout(()=>setGameState('completed'), 0);
         }
     }, [
         currentWords,
@@ -5061,74 +5137,25 @@ function useGameMode() {
         gameProgress.currentWordIndex
     ]);
     // ========================================
-    // ATTEMPT RECORDING - Declared before process functions
+    // GAME LOGIC FUNCTIONS
     // ========================================
-    const recordAttempt = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(async (targetWord, predictedWord, isCorrect)=>{
-        if (!currentSession) {
-            console.warn('[GAME_MODE] No hay sesión activa para registrar intento');
-            return;
-        }
-        // 🆕 Incrementar contador para debugging
-        attemptCounterRef.current += 1;
-        const currentAttemptId = attemptCounterRef.current;
-        // 🛡️ Protección de estado de juego: no registrar si el juego no está activo o no quedan vidas
-        if (gameState !== 'playing' || gameProgress.lives <= 0) {
-            console.warn(`[GAME_MODE] 🛡️ INTENTO #${currentAttemptId} BLOQUEADO - Juego inactivo:`, {
-                gameState,
-                lives: gameProgress.lives,
-                targetWord,
-                isCorrect
-            });
-            return;
-        }
-        // 🛡️ Protección anti-duplicados: evitar registros idénticos en los últimos 5 segundos
-        const now = Date.now();
-        const lastAttempt = lastAttemptRef.current;
-        console.log(`[GAME_MODE] � INTENTO #${currentAttemptId}: ${targetWord} → ${predictedWord} (${isCorrect ? '✓' : '✗'})`);
-        console.log(`[GAME_MODE] 🔍 Session: ${currentSession.session_id}`);
-        if (lastAttempt && lastAttempt.word === targetWord && lastAttempt.isCorrect === isCorrect && now - lastAttempt.time < 5000) {
-            console.warn(`[GAME_MODE] 🛡️ INTENTO #${currentAttemptId} DUPLICADO - IGNORANDO:`, {
-                targetWord,
-                isCorrect,
-                timeDiff: now - lastAttempt.time
-            });
-            return;
-        }
-        // Actualizar referencia del último intento
-        lastAttemptRef.current = {
-            word: targetWord,
-            time: now,
-            isCorrect
-        };
-        try {
-            console.log(`[GAME_MODE] 📝 ENVIANDO INTENTO #${currentAttemptId} al backend...`);
-            await gamificationService.recordAttempt({
-                session_id: currentSession.session_id,
-                target_letter: targetWord.charAt(0) || 'A',
-                predicted_letter: predictedWord.charAt(0) || 'A',
-                is_correct: isCorrect,
-                confidence: 0.95,
-                time_taken: 1000,
-                word_index: gameProgress.currentWordIndex,
-                target_word: targetWord,
-                predicted_word: predictedWord
-            });
-            console.log(`[GAME_MODE] ✅ INTENTO #${currentAttemptId} REGISTRADO exitosamente`);
-        } catch (error) {
-            console.error(`[GAME_MODE] ❌ ERROR en INTENTO #${currentAttemptId}:`, error);
-        }
-    }, [
-        currentSession,
-        gameProgress.currentWordIndex,
-        gamificationService
-    ]);
     const processCorrectAnswer = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])((word)=>{
         if (!currentLevel || !currentWord) return;
+        // 🛡️ PROTECCIÓN: No procesar si ya no quedan vidas o juego no está activo
+        if (gameProgress.lives <= 0 || gameState !== 'playing') {
+            console.warn('[GAME_MODE] 🛡️ IGNORANDO respuesta correcta - Juego inactivo:', {
+                currentLives: gameProgress.lives,
+                gameState
+            });
+            return;
+        }
         console.log('[GAME_MODE] 🎯 PROCESANDO RESPUESTA CORRECTA:', {
             word,
             currentWord
         });
-        // 📝 REGISTRAR INTENTO CORRECTO - se registrará después del estado
+        // 📝 ACUMULAR INTENTO CORRECTO (sin enviar al backend)
+        addPendingAttempt(currentWord, word, true);
+        // 📊 ACTUALIZAR ESTADO DEL JUEGO
         setGameProgress((prev)=>({
                 ...prev,
                 score: prev.score + 100 * currentLevel.points_multiplier * (prev.streak + 1),
@@ -5138,23 +5165,34 @@ function useGameMode() {
                 ],
                 streak: prev.streak + 1
             }));
-        // Registrar el intento correcto después de actualizar el estado
-        recordAttempt(currentWord, word, true).catch(console.error);
         nextWord();
     }, [
         currentLevel,
         currentWord,
         nextWord,
-        recordAttempt
+        addPendingAttempt,
+        gameProgress.lives,
+        gameState
     ]);
     const processWrongAnswer = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])((word)=>{
         if (!currentWord) return;
+        // 🛡️ PROTECCIÓN: No procesar si ya no quedan vidas
+        if (gameProgress.lives <= 0) {
+            console.warn('[GAME_MODE] 🛡️ IGNORANDO respuesta incorrecta - Sin vidas restantes:', {
+                currentLives: gameProgress.lives,
+                gameState
+            });
+            return;
+        }
         console.log('[GAME_MODE] 💥 PROCESANDO RESPUESTA INCORRECTA:', {
             currentWord,
             attemptedWord: word
         });
+        // 📝 ACUMULAR INTENTO INCORRECTO (sin enviar al backend)
+        addPendingAttempt(currentWord, word || '', false);
+        // 💔 ACTUALIZAR VIDAS - Esta lógica es independiente del registro
         setGameProgress((prev)=>{
-            const newLives = prev.lives - 1;
+            const newLives = Math.max(0, prev.lives - 1); // 🚨 NUNCA permitir vidas negativas
             const updatedProgress = {
                 ...prev,
                 lives: newLives,
@@ -5169,11 +5207,20 @@ function useGameMode() {
             }
             return updatedProgress;
         });
-        // 📝 REGISTRAR INTENTO INCORRECTO - después de perder vida
-        recordAttempt(currentWord, word || '', false).catch(console.error);
-        // Check if game over
-        if (gameProgress.lives - 1 <= 0) {
-            endGame(false);
+        // 🎯 DISPARADOR: Verificar si el juego debe terminar
+        const newLives = Math.max(0, gameProgress.lives - 1);
+        console.log('[GAME_MODE] 💔 Vidas después de respuesta incorrecta:', {
+            currentLives: gameProgress.lives,
+            newLives,
+            willTriggerGameOver: newLives <= 0
+        });
+        if (newLives <= 0) {
+            console.log('[GAME_MODE] 💀 DISPARADOR ACTIVADO - Sin vidas, terminando juego...');
+            // Usar setTimeout para evitar dependency issue
+            setTimeout(()=>{
+                console.log('[GAME_MODE] 💀 EJECUTANDO setGameState(game-over)');
+                setGameState('game-over');
+            }, 0);
         } else {
             nextWord();
         }
@@ -5182,22 +5229,45 @@ function useGameMode() {
         currentWord,
         gameProgress.lives,
         nextWord,
-        recordAttempt
+        addPendingAttempt,
+        gameState
     ]);
     const endGame = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(async (completed = false)=>{
-        stopTimer();
-        if (currentSession) {
-            try {
-                await gamificationService.endGameSession(currentSession.session_id, gameProgress.score, completed);
-            } catch (err) {
-                console.error('Error ending game session:', err);
-            }
+        console.log('[GAME_MODE] 🚀 endGame LLAMADO:', {
+            completed,
+            currentState: gameState,
+            currentSession: currentSession?.session_id,
+            gameProgress: gameProgress.score
+        });
+        // 🛡️ Protección contra múltiples llamadas - solo verificar si ya se ejecutó completamente
+        if (!currentSession) {
+            console.warn('[GAME_MODE] 🛡️ IGNORANDO endGame - No hay sesión activa');
+            return;
         }
-        setGameState(completed ? 'completed' : 'game-over');
+        console.log('[GAME_MODE] 🏁 TERMINANDO JUEGO:', {
+            completed,
+            currentState: gameState
+        });
+        stopTimer();
+        // 🚀 ENVIAR TODOS LOS INTENTOS ACUMULADOS AL BACKEND PRIMERO
+        console.log('[GAME_MODE] 📦 ENVIANDO intentos acumulados...');
+        await submitAllAttempts();
+        try {
+            console.log('[GAME_MODE] 📝 Finalizando sesión:', currentSession.session_id);
+            const response = await gamificationService.endGameSession(currentSession.session_id, gameProgress.score, completed);
+            console.log('[GAME_MODE] ✅ Sesión finalizada exitosamente:', response);
+            // 🗑️ Limpiar sesión después de finalizar exitosamente
+            setCurrentSession(null);
+        } catch (err) {
+            console.error('[GAME_MODE] ❌ Error ending game session:', err);
+        }
     }, [
         stopTimer,
         currentSession,
-        gameProgress.score
+        gameProgress.score,
+        gameState,
+        submitAllAttempts,
+        gamificationService
     ]);
     const resetGame = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(()=>{
         stopTimer();
@@ -5209,9 +5279,27 @@ function useGameMode() {
         setCurrentWord(null);
         setCurrentChallenge(null);
         setError(null);
+        // 🗑️ Limpiar acumulador
+        pendingAttemptsRef.current = [];
     }, [
         stopTimer
     ]);
+    // ========================================
+    // AUTO END GAME WHEN STATE CHANGES
+    // ========================================
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
+        console.log('[GAME_MODE] 👀 Monitoreando gameState:', gameState);
+        // Solo ejecutar endGame cuando cambie A game-over/completed, no cuando ya esté en ese estado
+        if ((gameState === 'game-over' || gameState === 'completed') && currentSession) {
+            const isCompleted = gameState === 'completed';
+            console.log(`[GAME_MODE] 🎮 Estado cambió a ${gameState}, llamando endGame(${isCompleted})...`);
+            // Ejecutar inmediatamente para evitar múltiples llamadas
+            endGame(isCompleted);
+        }
+    }, [
+        gameState,
+        currentSession
+    ]); // Removemos endGame de las dependencias para evitar loops
     // ========================================
     // CLEANUP
     // ========================================
@@ -5245,7 +5333,6 @@ function useGameMode() {
         nextWord,
         processCorrectAnswer,
         processWrongAnswer,
-        recordAttempt,
         endGame,
         resetGame,
         // Loading & Error States
