@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm install && npm run build",
+  "ignoreFiles": [
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/__tests__/**",
+    "**/__mocks__/**"
+  ]
+}
