@@ -16,15 +16,18 @@ import {
 } from 'lucide-react'
 
 export default function TutorialWelcome() {
-  const { profile } = useAuth()
+  const { profile, completeTutorial } = useAuth()
   const router = useRouter()
 
-  const handleStartTutorial = () => {
+  const handleStartTutorial = async () => {
+    // Marcamos el tutorial como completado cuando el usuario comienza
+    await completeTutorial()
     // Por ahora redirigimos a práctica, luego implementaremos el tutorial completo
     router.push('/practice')
   }
 
-  const handleSkipTutorial = () => {
+  const handleSkipTutorial = async () => {
+    await completeTutorial()
     router.push('/dashboard')
   }
 

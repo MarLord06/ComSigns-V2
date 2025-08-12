@@ -346,6 +346,26 @@ const AuthProvider = ({ children })=>{
             await loadUserStats(user.id);
         }
     };
+    const completeTutorial = async ()=>{
+        if (user) {
+            try {
+                const { error } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('profiles').update({
+                    is_new_user: false
+                }).eq('id', user.id);
+                if (error) {
+                    console.error('Error completing tutorial:', error);
+                } else {
+                    // Actualizar el estado local inmediatamente
+                    setProfile((prev)=>prev ? {
+                            ...prev,
+                            is_new_user: false
+                        } : null);
+                }
+            } catch (error) {
+                console.error('Error updating tutorial status:', error);
+            }
+        }
+    };
     const value = {
         user,
         session,
@@ -357,14 +377,15 @@ const AuthProvider = ({ children })=>{
         signOut,
         updateProfile,
         refreshStats,
-        isNewUser
+        isNewUser,
+        completeTutorial
     };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(AuthContext.Provider, {
         value: value,
         children: children
     }, void 0, false, {
         fileName: "[project]/lib/auth-context.tsx",
-        lineNumber: 347,
+        lineNumber: 369,
         columnNumber: 10
     }, this);
 };

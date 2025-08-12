@@ -1645,13 +1645,16 @@ var _s = __turbopack_context__.k.signature();
 ;
 function TutorialWelcome() {
     _s();
-    const { profile } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$auth$2d$context$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"])();
+    const { profile, completeTutorial } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$auth$2d$context$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"])();
     const router = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"])();
-    const handleStartTutorial = ()=>{
+    const handleStartTutorial = async ()=>{
+        // Marcamos el tutorial como completado cuando el usuario comienza
+        await completeTutorial();
         // Por ahora redirigimos a práctica, luego implementaremos el tutorial completo
         router.push('/practice');
     };
-    const handleSkipTutorial = ()=>{
+    const handleSkipTutorial = async ()=>{
+        await completeTutorial();
         router.push('/dashboard');
     };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$auth$2f$protected$2d$route$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["ProtectedRoute"], {
@@ -1672,17 +1675,17 @@ function TutorialWelcome() {
                                             className: "h-16 w-16 text-blue-600"
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 40,
+                                            lineNumber: 43,
                                             columnNumber: 19
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                        lineNumber: 39,
+                                        lineNumber: 42,
                                         columnNumber: 17
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                    lineNumber: 38,
+                                    lineNumber: 41,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
@@ -1694,7 +1697,7 @@ function TutorialWelcome() {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                    lineNumber: 44,
+                                    lineNumber: 47,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1705,20 +1708,20 @@ function TutorialWelcome() {
                                             children: "ComSigns"
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 49,
+                                            lineNumber: 52,
                                             columnNumber: 42
                                         }, this),
                                         ", tu plataforma para aprender lenguaje de señas de manera interactiva y divertida."
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                    lineNumber: 48,
+                                    lineNumber: 51,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                            lineNumber: 37,
+                            lineNumber: 40,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1733,12 +1736,12 @@ function TutorialWelcome() {
                                                 className: "h-8 w-8 text-green-600"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                                lineNumber: 58,
+                                                lineNumber: 61,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 57,
+                                            lineNumber: 60,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -1746,7 +1749,7 @@ function TutorialWelcome() {
                                             children: "Aprende Paso a Paso"
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 60,
+                                            lineNumber: 63,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1754,13 +1757,13 @@ function TutorialWelcome() {
                                             children: "Comienza con las letras básicas del alfabeto en lenguaje de señas, desde la A hasta la Z."
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 63,
+                                            lineNumber: 66,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                    lineNumber: 56,
+                                    lineNumber: 59,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1772,12 +1775,12 @@ function TutorialWelcome() {
                                                 className: "h-8 w-8 text-purple-600"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                                lineNumber: 71,
+                                                lineNumber: 74,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 70,
+                                            lineNumber: 73,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -1785,7 +1788,7 @@ function TutorialWelcome() {
                                             children: "Práctica Interactiva"
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 73,
+                                            lineNumber: 76,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1793,13 +1796,13 @@ function TutorialWelcome() {
                                             children: "Usa tu cámara para practicar las señas y recibir retroalimentación en tiempo real."
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 76,
+                                            lineNumber: 79,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                    lineNumber: 69,
+                                    lineNumber: 72,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1811,12 +1814,12 @@ function TutorialWelcome() {
                                                 className: "h-8 w-8 text-orange-600"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                                lineNumber: 84,
+                                                lineNumber: 87,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 83,
+                                            lineNumber: 86,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -1824,7 +1827,7 @@ function TutorialWelcome() {
                                             children: "Progreso Gamificado"
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 86,
+                                            lineNumber: 89,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1832,19 +1835,19 @@ function TutorialWelcome() {
                                             children: "Gana puntos, desbloquea logros y mantén tu racha de aprendizaje diaria."
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 89,
+                                            lineNumber: 92,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                    lineNumber: 82,
+                                    lineNumber: 85,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                            lineNumber: 55,
+                            lineNumber: 58,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1857,7 +1860,7 @@ function TutorialWelcome() {
                                             className: "h-6 w-6 text-yellow-500"
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 99,
+                                            lineNumber: 102,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -1865,13 +1868,13 @@ function TutorialWelcome() {
                                             children: "Tu Nivel de Experiencia"
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 100,
+                                            lineNumber: 103,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                    lineNumber: 98,
+                                    lineNumber: 101,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1890,13 +1893,13 @@ function TutorialWelcome() {
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                                    lineNumber: 108,
+                                                    lineNumber: 111,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 106,
+                                            lineNumber: 109,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1908,19 +1911,19 @@ function TutorialWelcome() {
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 115,
+                                            lineNumber: 118,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                    lineNumber: 105,
+                                    lineNumber: 108,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                            lineNumber: 97,
+                            lineNumber: 100,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1934,14 +1937,14 @@ function TutorialWelcome() {
                                             className: "mr-2 h-5 w-5"
                                         }, void 0, false, {
                                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                            lineNumber: 132,
+                                            lineNumber: 135,
                                             columnNumber: 17
                                         }, this),
                                         "Comenzar Tutorial"
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                    lineNumber: 128,
+                                    lineNumber: 131,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -1951,13 +1954,13 @@ function TutorialWelcome() {
                                     children: "Saltar por Ahora"
                                 }, void 0, false, {
                                     fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                    lineNumber: 136,
+                                    lineNumber: 139,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                            lineNumber: 127,
+                            lineNumber: 130,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1970,44 +1973,44 @@ function TutorialWelcome() {
                                         children: "Tip:"
                                     }, void 0, false, {
                                         fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                        lineNumber: 148,
+                                        lineNumber: 151,
                                         columnNumber: 20
                                     }, this),
                                     " Puedes cambiar tu nivel de experiencia en cualquier momento desde tu perfil."
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/tutorial/welcome/page.tsx",
-                                lineNumber: 147,
+                                lineNumber: 150,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/app/tutorial/welcome/page.tsx",
-                            lineNumber: 146,
+                            lineNumber: 149,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/app/tutorial/welcome/page.tsx",
-                    lineNumber: 35,
+                    lineNumber: 38,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/app/tutorial/welcome/page.tsx",
-                lineNumber: 34,
+                lineNumber: 37,
                 columnNumber: 9
             }, this)
         }, void 0, false, {
             fileName: "[project]/app/tutorial/welcome/page.tsx",
-            lineNumber: 33,
+            lineNumber: 36,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/app/tutorial/welcome/page.tsx",
-        lineNumber: 32,
+        lineNumber: 35,
         columnNumber: 5
     }, this);
 }
-_s(TutorialWelcome, "G0EB+teSXWBbP5teOkjgGWqPwKE=", false, function() {
+_s(TutorialWelcome, "BzVAuLieX//oACIg91gHs/5GIag=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$auth$2d$context$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"],
         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"]
