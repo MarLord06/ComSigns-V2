@@ -1,3 +1,0 @@
-"""
-Tutorial module for COMSIGNS
-"""

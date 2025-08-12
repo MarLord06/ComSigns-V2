@@ -207,7 +207,7 @@ export default function LandingPage() {
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full blur-3xl opacity-20 animate-pulse"></div>
                   <Image
-                    src="/placeholder.svg?height=400&width=400"
+                    src="/images/landing/heroImage.png"
                     width="400"
                     height="400"
                     alt="Demostración de persona usando lenguaje de señas siendo traducido por inteligencia artificial en tiempo real"
@@ -328,7 +328,7 @@ export default function LandingPage() {
               </div>
               <div className="flex justify-center">
                 <Image
-                  src="/placeholder.svg?height=300&width=500"
+                  src="/images/landing/about_section.png"
                   width="500"
                   height="300"
                   alt="Equipo trabajando en tecnología de accesibilidad"
