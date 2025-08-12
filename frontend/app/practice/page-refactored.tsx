@@ -125,7 +125,7 @@ export default function PracticePage() {
   const stats = {
     totalLetters: ALPHABET_LETTERS.filter(l => l.completed).length,
     totalStars: ALPHABET_LETTERS.reduce((sum, l) => sum + l.stars, 0),
-    completionRate: Math.round((ALPHABET_LETTERS.filter(l => l.completed).length / ALPHABET_LETTERS.length) * 100),
+    completionRate: Number(((ALPHABET_LETTERS.filter(l => l.completed).length / ALPHABET_LETTERS.length) * 100).toFixed(2)),
     streak: 5
   }
 

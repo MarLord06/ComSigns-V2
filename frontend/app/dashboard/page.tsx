@@ -175,7 +175,7 @@ export default function Dashboard() {
             <StatCard
               icon={TrendingUp}
               title="Precisión Promedio"
-              value={`${userStats.average_accuracy}%`}
+              value={`${userStats.average_accuracy.toFixed(2)}%`}
               subtitle="en reconocimiento"
               color="purple"
             />

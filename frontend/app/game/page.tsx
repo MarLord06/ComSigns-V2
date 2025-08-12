@@ -113,19 +113,14 @@ export default function GamePage() {
     
     if (predictedWord === targetWord) {
       console.log('[WORD_CHECK] ✅ ¡Palabra correcta!');
-      // Registrar intento correcto
-      gameMode.recordAttempt(targetWord, predictedWord, true);
+      // ✅ CORRECTO: Solo procesar la respuesta, el registro se hará cuando termine la vida
       gameMode.processCorrectAnswer(targetWord);
       clearWordBuffer(); // Limpiar buffer al acertar
-      // resetInactivityTimer(); // Lo manejaremos en useEffect
     } else if (predictedWord.length === targetWord.length) {
       console.log('[WORD_CHECK] ❌ Palabra incorrecta (longitud completa)');
-      // Palabra completa pero incorrecta - perder una vida y limpiar buffer
-      // Registrar intento incorrecto
-      gameMode.recordAttempt(targetWord, predictedWord, false);
+      // ❌ CORRECTO: Solo procesar respuesta incorrecta, el registro se hará cuando se pierda la vida
       gameMode.processWrongAnswer(predictedWord);
       clearWordBuffer(); // Limpiar buffer para nuevo intento  
-      // resetInactivityTimer(); // Lo manejaremos en useEffect
     } else {
       console.log('[WORD_CHECK] ⏳ Palabra incompleta, continuando...');
       // Palabra incompleta, no hacer nada (continuar recolectando letras)
@@ -155,11 +150,8 @@ export default function GamePage() {
     if (gameMode.gameState === 'playing') {
       inactivityTimeoutRef.current = setTimeout(() => {
         console.log('[INACTIVITY] ⏰ Timeout por inactividad - perdiendo vida');
-        // Registrar intento incorrecto por inactividad
-        if (gameMode.currentWord) {
-          gameMode.recordAttempt(gameMode.currentWord, '', false); // Palabra vacía por inactividad
-        }
-        gameMode.processWrongAnswer(); // Sin palabra específica
+        // ⏰ CORRECTO: Solo procesar pérdida de vida, el registro se hará cuando se pierda la vida
+        gameMode.processWrongAnswer(); // Sin palabra específica - esto causará pérdida de vida
         clearWordBuffer(); // Limpiar buffer
         resetInactivityTimer(); // Reiniciar timer para próxima palabra
       }, INACTIVITY_TIMEOUT);
@@ -500,7 +492,7 @@ export default function GamePage() {
   const stats: GameStats = {
     totalScore: profile?.total_points || 0,
     gamesPlayed: profile?.games_played || 0,
-    accuracy: Math.round(profile?.accuracy_percentage || 0),
+    accuracy: Number((profile?.accuracy_percentage || 0).toFixed(2)),
     bestStreak: profile?.longest_streak || 0,
     levelsCompleted: gameMode.levels.filter((l: any) => l.completed).length
   }
@@ -516,7 +508,7 @@ export default function GamePage() {
         Debug: gameState="{gameMode.gameState}" currentLevel={gameMode.currentLevel ? gameMode.currentLevel.name : 'null'} levels={gameMode.levels.length}
         <br />
         Buffer: "{wordBuffer}" ({wordBuffer.length}/{gameMode.currentWord?.length || 0}) 
-        | Predicción actual: "{currentPrediction}" ({confidence.toFixed(2)})
+        | Predicción actual: "{currentPrediction}" ({(confidence * 100).toFixed(2)}%)
       </div>
 
       {/* PANTALLA INICIAL */}
@@ -734,7 +726,7 @@ export default function GamePage() {
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                   <div className="text-sm text-gray-600 mb-2">Predicción actual:</div>
                   <div className="text-xl font-bold text-blue-600 mb-3">
-                    {currentPrediction} <span className="text-sm text-gray-500">({(confidence * 100).toFixed(0)}%)</span>
+                    {currentPrediction} <span className="text-sm text-gray-500">({(confidence * 100).toFixed(2)}%)</span>
                   </div>
                   
                   {/* Botón para agregar predicción al buffer */}

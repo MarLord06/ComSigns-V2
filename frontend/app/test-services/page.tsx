@@ -114,7 +114,7 @@ export default function TestServicesPage() {
                 <div className="flex justify-between">
                   <span>Predicción:</span>
                   <span className="font-bold text-lg">
-                    {camera.currentPrediction || '...'} ({Math.round(camera.confidence * 100)}%)
+                    {camera.currentPrediction || '...'} ({(camera.confidence * 100).toFixed(2)}%)
                   </span>
                 </div>
               )}

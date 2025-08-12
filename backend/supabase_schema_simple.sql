@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS public.game_attempts (
     game_session_id UUID REFERENCES public.game_sessions(id) ON DELETE CASCADE NOT NULL,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     target_word TEXT NOT NULL,
+    predicted_word TEXT, -- 🆕 Palabra predicha completa
     word_index INTEGER NOT NULL,
     predicted_letters JSONB, -- Array de predicciones de letras
     is_correct BOOLEAN NOT NULL,

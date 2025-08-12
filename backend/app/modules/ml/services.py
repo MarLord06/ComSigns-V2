@@ -224,8 +224,8 @@ class TutorialService:
             return {"error": "Paso inválido"}
         
         # Importar el servicio de Supabase aquí para evitar importación circular
-        from app.core.simple_supabase import get_simple_supabase_service
-        supabase_service = get_simple_supabase_service()
+        from app.core.supabase import get_supabase_service
+        supabase_service = get_supabase_service()
         
         # Intentar obtener la lección desde Supabase
         lesson = await supabase_service.get_tutorial_lesson_by_number(step)
@@ -263,8 +263,8 @@ class TutorialService:
         Obtener resumen del tutorial desde Supabase o fallback
         """
         # Importar el servicio de Supabase aquí para evitar importación circular
-        from app.core.simple_supabase import get_simple_supabase_service
-        supabase_service = get_simple_supabase_service()
+        from app.core.supabase import get_supabase_service
+        supabase_service = get_supabase_service()
         
         # Intentar obtener lecciones desde Supabase
         lessons = await supabase_service.get_tutorial_lessons()

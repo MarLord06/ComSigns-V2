@@ -4602,9 +4602,14 @@ class GamificationService {
             throw error;
         }
     }
-    // Registrar un intento de letra individual
+    // Registrar un intento de palabra completa (actualizado)
     async recordAttempt(attemptData) {
         try {
+            console.log('[GAMIFICATION_SERVICE] 📝 Enviando intento al backend:', {
+                target_word: attemptData.target_word,
+                predicted_word: attemptData.predicted_word,
+                is_correct: attemptData.is_correct
+            });
             // Mapear los datos al formato esperado por el backend
             const response = await fetch(`${this.baseUrl}/game/attempt`, {
                 method: 'POST',
@@ -4616,10 +4621,14 @@ class GamificationService {
                     letter_id: this.getLetterIdFromName(attemptData.target_letter),
                     is_correct: attemptData.is_correct,
                     time_taken: attemptData.time_taken,
-                    confidence_score: attemptData.confidence
+                    confidence_score: attemptData.confidence,
+                    target_word: attemptData.target_word,
+                    predicted_word: attemptData.predicted_word // Palabra predicha
                 })
             });
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error('[GAMIFICATION_SERVICE] Error response:', errorText);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             return await response.json();
@@ -4880,6 +4889,9 @@ function useGameMode() {
     const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
     // Timer ref
     const timerRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
+    // Protección contra registros duplicados
+    const lastAttemptRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const attemptCounterRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(0); // 🆕 Contador para debugging
     // ========================================
     // TIMER MANAGEMENT
     // ========================================
@@ -4912,11 +4924,32 @@ function useGameMode() {
     // Stop timer when time runs out
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
         if (gameProgress.timeRemaining === 0 && gameState === 'playing') {
-            processWrongAnswer();
+            console.log('[GAME_MODE] ⏰ TIMEOUT - Tiempo agotado, procesando como respuesta incorrecta');
+            // Llamada directa para evitar dependencia circular
+            if (currentWord) {
+                setGameProgress((prev)=>({
+                        ...prev,
+                        lives: prev.lives - 1,
+                        streak: 0,
+                        timeRemaining: currentLevel?.time_limit || 30
+                    }));
+                // Solo registrar si hay sesión activa
+                if (currentSession) {
+                    recordAttempt(currentWord, '', false).catch(console.error);
+                }
+                // Check game over
+                if (gameProgress.lives - 1 <= 0) {
+                    setGameState('game-over');
+                }
+            }
         }
     }, [
         gameProgress.timeRemaining,
-        gameState
+        gameState,
+        gameProgress.lives,
+        currentWord,
+        currentLevel,
+        currentSession
     ]);
     // ========================================
     // GAME ACTIONS
@@ -5027,8 +5060,75 @@ function useGameMode() {
         currentLevel,
         gameProgress.currentWordIndex
     ]);
+    // ========================================
+    // ATTEMPT RECORDING - Declared before process functions
+    // ========================================
+    const recordAttempt = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(async (targetWord, predictedWord, isCorrect)=>{
+        if (!currentSession) {
+            console.warn('[GAME_MODE] No hay sesión activa para registrar intento');
+            return;
+        }
+        // 🆕 Incrementar contador para debugging
+        attemptCounterRef.current += 1;
+        const currentAttemptId = attemptCounterRef.current;
+        // 🛡️ Protección de estado de juego: no registrar si el juego no está activo o no quedan vidas
+        if (gameState !== 'playing' || gameProgress.lives <= 0) {
+            console.warn(`[GAME_MODE] 🛡️ INTENTO #${currentAttemptId} BLOQUEADO - Juego inactivo:`, {
+                gameState,
+                lives: gameProgress.lives,
+                targetWord,
+                isCorrect
+            });
+            return;
+        }
+        // 🛡️ Protección anti-duplicados: evitar registros idénticos en los últimos 5 segundos
+        const now = Date.now();
+        const lastAttempt = lastAttemptRef.current;
+        console.log(`[GAME_MODE] � INTENTO #${currentAttemptId}: ${targetWord} → ${predictedWord} (${isCorrect ? '✓' : '✗'})`);
+        console.log(`[GAME_MODE] 🔍 Session: ${currentSession.session_id}`);
+        if (lastAttempt && lastAttempt.word === targetWord && lastAttempt.isCorrect === isCorrect && now - lastAttempt.time < 5000) {
+            console.warn(`[GAME_MODE] 🛡️ INTENTO #${currentAttemptId} DUPLICADO - IGNORANDO:`, {
+                targetWord,
+                isCorrect,
+                timeDiff: now - lastAttempt.time
+            });
+            return;
+        }
+        // Actualizar referencia del último intento
+        lastAttemptRef.current = {
+            word: targetWord,
+            time: now,
+            isCorrect
+        };
+        try {
+            console.log(`[GAME_MODE] 📝 ENVIANDO INTENTO #${currentAttemptId} al backend...`);
+            await gamificationService.recordAttempt({
+                session_id: currentSession.session_id,
+                target_letter: targetWord.charAt(0) || 'A',
+                predicted_letter: predictedWord.charAt(0) || 'A',
+                is_correct: isCorrect,
+                confidence: 0.95,
+                time_taken: 1000,
+                word_index: gameProgress.currentWordIndex,
+                target_word: targetWord,
+                predicted_word: predictedWord
+            });
+            console.log(`[GAME_MODE] ✅ INTENTO #${currentAttemptId} REGISTRADO exitosamente`);
+        } catch (error) {
+            console.error(`[GAME_MODE] ❌ ERROR en INTENTO #${currentAttemptId}:`, error);
+        }
+    }, [
+        currentSession,
+        gameProgress.currentWordIndex,
+        gamificationService
+    ]);
     const processCorrectAnswer = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])((word)=>{
-        if (!currentLevel) return;
+        if (!currentLevel || !currentWord) return;
+        console.log('[GAME_MODE] 🎯 PROCESANDO RESPUESTA CORRECTA:', {
+            word,
+            currentWord
+        });
+        // 📝 REGISTRAR INTENTO CORRECTO - se registrará después del estado
         setGameProgress((prev)=>({
                 ...prev,
                 score: prev.score + 100 * currentLevel.points_multiplier * (prev.streak + 1),
@@ -5038,12 +5138,21 @@ function useGameMode() {
                 ],
                 streak: prev.streak + 1
             }));
+        // Registrar el intento correcto después de actualizar el estado
+        recordAttempt(currentWord, word, true).catch(console.error);
         nextWord();
     }, [
         currentLevel,
-        nextWord
+        currentWord,
+        nextWord,
+        recordAttempt
     ]);
     const processWrongAnswer = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])((word)=>{
+        if (!currentWord) return;
+        console.log('[GAME_MODE] 💥 PROCESANDO RESPUESTA INCORRECTA:', {
+            currentWord,
+            attemptedWord: word
+        });
         setGameProgress((prev)=>{
             const newLives = prev.lives - 1;
             const updatedProgress = {
@@ -5060,6 +5169,8 @@ function useGameMode() {
             }
             return updatedProgress;
         });
+        // 📝 REGISTRAR INTENTO INCORRECTO - después de perder vida
+        recordAttempt(currentWord, word || '', false).catch(console.error);
         // Check if game over
         if (gameProgress.lives - 1 <= 0) {
             endGame(false);
@@ -5068,8 +5179,10 @@ function useGameMode() {
         }
     }, [
         currentLevel,
+        currentWord,
         gameProgress.lives,
-        nextWord
+        nextWord,
+        recordAttempt
     ]);
     const endGame = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(async (completed = false)=>{
         stopTimer();
@@ -5098,37 +5211,6 @@ function useGameMode() {
         setError(null);
     }, [
         stopTimer
-    ]);
-    const recordAttempt = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(async (targetWord, predictedWord, isCorrect)=>{
-        if (!currentSession) {
-            console.warn('[GAME_MODE] No hay sesión activa para registrar intento');
-            return;
-        }
-        try {
-            // Para simplificar, vamos a usar el primer caracter como letter_id
-            // En una implementación completa, deberías mapear cada letra a su ID correspondiente
-            const letterId = targetWord.charCodeAt(0) - 65 + 1; // A=1, B=2, C=3, etc.
-            await gamificationService.recordAttempt({
-                session_id: currentSession.session_id,
-                target_letter: targetWord[0],
-                predicted_letter: predictedWord[0] || '',
-                is_correct: isCorrect,
-                confidence: 0.8,
-                time_taken: 1.0,
-                word_index: gameProgress.currentWordIndex
-            });
-            console.log('[GAME_MODE] ✅ Intento registrado:', {
-                targetWord,
-                predictedWord,
-                isCorrect
-            });
-        } catch (error) {
-            console.error('[GAME_MODE] Error registrando intento:', error);
-        }
-    }, [
-        currentSession,
-        gameProgress.currentWordIndex,
-        gamificationService
     ]);
     // ========================================
     // CLEANUP

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { TranslationResponse } from '@/lib/services/translation.service';
 import { Clock, Hand } from 'lucide-react';
+import { formatConfidence } from '@/lib/utils';
 
 interface TranslationResultProps {
   result: TranslationResponse | null;
@@ -44,7 +45,7 @@ export function TranslationResult({
               <div className="space-y-2">
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-sm text-muted-foreground">Confianza:</span>
-                  <span className="font-medium">{(confidence * 100).toFixed(1)}%</span>
+                  <span className="font-medium">{formatConfidence(confidence)}</span>
                 </div>
                 <Progress value={confidence * 100} className="w-full" />
               </div>
@@ -101,7 +102,7 @@ export function TranslationResult({
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Confianza</span>
-                <span>{(result.result.confidence * 100).toFixed(1)}%</span>
+                <span>{formatConfidence(result.result.confidence)}</span>
               </div>
               <Progress 
                 value={result.result.confidence * 100} 
@@ -129,7 +130,7 @@ export function TranslationResult({
                   {result.result.detailed_predictions.map((pred, index) => (
                     <div key={index} className="flex justify-between text-xs bg-gray-50 p-2 rounded">
                       <span className="font-medium">{pred.sign}</span>
-                      <span>{(pred.confidence * 100).toFixed(1)}%</span>
+                      <span>{formatConfidence(pred.confidence)}</span>
                     </div>
                   ))}
                 </div>

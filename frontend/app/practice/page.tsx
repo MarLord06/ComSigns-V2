@@ -309,13 +309,13 @@ export default function PracticePage() {
                     {currentChallenge.type === "speed" && (
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600">Tiempo</span>
-                        <Badge variant="outline">{(timeElapsed / 1000).toFixed(1)}s</Badge>
+                        <Badge variant="outline">{(timeElapsed / 1000).toFixed(2)}s</Badge>
                       </div>
                     )}
                     {confidence > 0 && (
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600">Confianza</span>
-                        <Badge variant="outline">{Math.round(confidence * 100)}%</Badge>
+                        <Badge variant="outline">{(confidence * 100).toFixed(2)}%</Badge>
                       </div>
                     )}
                     <div className="flex justify-between items-center">

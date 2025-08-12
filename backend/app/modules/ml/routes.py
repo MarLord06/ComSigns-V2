@@ -8,8 +8,21 @@ import uuid
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, WebSocket
 from fastapi import WebSocketDisconnect  # añadido para manejar desconexiones
+from websockets.exceptions import ConnectionClosedError  # añadido para manejar errores de conexión
 
-from app.core.simple_supabase import get_simple_supabase_service
+# UUID por defecto para desarrollo (válido)
+DEV_USER_UUID = "c1d5bed7-fa7c-41fe-947a-11be465cd512"
+
+def validate_uuid(uuid_string: str) -> str:
+    """Valida que el string sea un UUID válido, si no, devuelve el UUID por defecto"""
+    try:
+        uuid.UUID(uuid_string)
+        return uuid_string
+    except (ValueError, TypeError):
+        print(f"UUID inválido '{uuid_string}', usando UUID por defecto")
+        return DEV_USER_UUID
+
+from app.core.supabase import get_supabase_service as get_supabase_service_import
 from app.core.config import settings
 from app.modules.ml.services import ml_service, tutorial_service, practice_service
 from app.modules.ml.schemas import (
@@ -22,10 +35,23 @@ from app.modules.ml.schemas import (
 
 router = APIRouter()
 
+# Helper function para envío seguro de WebSocket
+async def safe_websocket_send(websocket: WebSocket, data: dict) -> bool:
+    """Envía datos por WebSocket de forma segura, manejando desconexiones"""
+    try:
+        await websocket.send_json(data)  # 🔧 CORREGIDO: era self-recursive
+        return True
+    except (WebSocketDisconnect, ConnectionClosedError, RuntimeError) as e:
+        print(f"🔌 WebSocket desconectado durante envío: {type(e).__name__}: {e}")
+        return False
+    except Exception as e:
+        print(f"❌ Error inesperado en WebSocket: {type(e).__name__}: {e}")
+        return False
+
 # Función para obtener el servicio Supabase
 def get_supabase_service():
     """Obtener servicio Supabase"""
-    return get_simple_supabase_service()
+    return get_supabase_service_import()
 
 def get_or_create_session_id(request: Request) -> str:
     """
@@ -81,11 +107,14 @@ async def predict_letter(websocket: WebSocket):
         })
 
     # Enviar mensaje inicial de sesión
-    await websocket.send_json({
+    connection_active = await safe_websocket_send(websocket, {
         "type": "session",
         "session_id": session_id,
         "message": "connected"
     })
+    
+    if not connection_active:
+        return  # Salir si la conexión ya está cerrada
 
     try:
         while True:
@@ -98,7 +127,7 @@ async def predict_letter(websocket: WebSocket):
             try:
                 payload = json.loads(raw_msg)
             except json.JSONDecodeError:
-                await websocket.send_json({
+                await safe_websocket_send(websocket, {
                     "type": "error",
                     "error": "Formato JSON inválido",
                     "session_id": session_id
@@ -108,14 +137,14 @@ async def predict_letter(websocket: WebSocket):
             msg_type = payload.get("type")
 
             if msg_type == "ping":
-                await websocket.send_json({
+                await safe_websocket_send(websocket, {
                     "type": "pong",
                     "timestamp": uuid.uuid4().hex  # simple token de respuesta
                 })
                 continue
 
             if msg_type != "frame":
-                await websocket.send_json({
+                await safe_websocket_send(websocket, {
                     "type": "error",
                     "error": "Tipo de mensaje no soportado",
                     "session_id": session_id
@@ -125,7 +154,7 @@ async def predict_letter(websocket: WebSocket):
             # Obtener imagen base64
             b64_image = payload.get("image")
             if not b64_image:
-                await websocket.send_json({
+                await safe_websocket_send(websocket, {
                     "type": "error",
                     "error": "Campo 'image' requerido",
                     "session_id": session_id
@@ -137,7 +166,7 @@ async def predict_letter(websocket: WebSocket):
                 try:
                     b64_image = b64_image.split(",", 1)[1]
                 except Exception:
-                    await websocket.send_json({
+                    await safe_websocket_send(websocket, {
                         "type": "error",
                         "error": "Formato data URL inválido",
                         "session_id": session_id
@@ -148,7 +177,7 @@ async def predict_letter(websocket: WebSocket):
             try:
                 image_data = base64.b64decode(b64_image)
             except Exception:
-                await websocket.send_json({
+                await safe_websocket_send(websocket, {
                     "type": "error",
                     "error": "Imagen base64 inválida",
                     "session_id": session_id
@@ -164,7 +193,7 @@ async def predict_letter(websocket: WebSocket):
                 if supabase_service.is_connected():
                     await supabase_service.save_ml_prediction(
                         session_id=session_id,
-                        user_id="dev-user-001",  # Usuario por defecto para desarrollo
+                        user_id=validate_uuid(DEV_USER_UUID),  # Usuario validado
                         prediction_data={
                             "predicted_letter": "",
                             "status": "no_hand_detected",
@@ -174,7 +203,7 @@ async def predict_letter(websocket: WebSocket):
                         confidence=0.0
                     )
 
-                await websocket.send_json({
+                await safe_websocket_send(websocket, {
                     "type": "prediction",
                     "letter": "",
                     "confidence": 0.0,
@@ -193,7 +222,7 @@ async def predict_letter(websocket: WebSocket):
             if supabase_service.is_connected():
                 await supabase_service.save_ml_prediction(
                     session_id=session_id,
-                    user_id="dev-user-001",  # Usuario por defecto para desarrollo
+                    user_id=validate_uuid(DEV_USER_UUID),  # Usuario validado
                     prediction_data={
                         "predicted_letter": result["letter"],
                         "status": result["status"],
@@ -203,7 +232,7 @@ async def predict_letter(websocket: WebSocket):
                     confidence=result["confidence"]
                 )
 
-            await websocket.send_json({
+            await safe_websocket_send(websocket, {
                 "type": "prediction",
                 "letter": result["letter"],
                 "confidence": result["confidence"],
@@ -217,7 +246,7 @@ async def predict_letter(websocket: WebSocket):
         # Desconexión normal
         pass
     except Exception as e:
-        await websocket.send_json({
+        await safe_websocket_send(websocket, {
             "type": "error",
             "error": f"Error interno: {str(e)}",
             "session_id": session_id

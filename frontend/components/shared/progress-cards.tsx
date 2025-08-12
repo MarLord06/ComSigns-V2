@@ -183,7 +183,7 @@ export function ChallengeCard({
             <Progress value={(progress / target) * 100} className="mb-3" />
             <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
               <span>Progreso: {progress}/{target}</span>
-              <span>{Math.round((progress / target) * 100)}%</span>
+              <span>{((progress / target) * 100).toFixed(2)}%</span>
             </div>
           </>
         )}

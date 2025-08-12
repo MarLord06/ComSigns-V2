@@ -10,7 +10,7 @@ import uuid
 import logging
 from datetime import datetime
 
-from app.core.simple_supabase import get_simple_supabase_service
+from app.core.supabase import get_supabase_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -29,6 +29,9 @@ class GameAttemptRequest(BaseModel):
     is_correct: bool
     time_taken: float
     confidence_score: Optional[float] = None
+    # Nuevos campos para palabras completas
+    target_word: Optional[str] = None  # Palabra objetivo completa
+    predicted_word: Optional[str] = None  # Palabra predicha completa
 
 class MLPredictionRequest(BaseModel):
     session_id: str
@@ -43,9 +46,9 @@ class AwardAchievementRequest(BaseModel):
 # 🔧 DEPENDENCIAS
 # =============================================
 
-def get_supabase_service():
+def get_supabase_dependency():
     """Obtener servicio Supabase como dependency"""
-    return get_simple_supabase_service()
+    return get_supabase_service()
 
 def get_current_user() -> dict:
     """Función que devuelve el usuario por defecto para desarrollo"""
@@ -62,7 +65,7 @@ def get_current_user() -> dict:
 @router.post("/game/start")
 async def start_game_session(
     request: StartGameRequest,
-    supabase_service = Depends(get_supabase_service)
+    supabase_service = Depends(get_supabase_dependency)
 ) -> Dict[str, Any]:
     """Iniciar nueva sesión de juego"""
     try:
@@ -204,7 +207,7 @@ async def start_game_session(
 async def get_game_session(
     session_id: str,
     current_user: dict = Depends(get_current_user),
-    supabase_service = Depends(get_supabase_service)
+    supabase_service = Depends(get_supabase_dependency)
 ) -> Dict[str, Any]:
     """Obtener información de sesión de juego"""
     try:
@@ -240,26 +243,38 @@ async def get_game_session(
 async def record_game_attempt(
     request: GameAttemptRequest,
     current_user: dict = Depends(get_current_user),
-    supabase_service = Depends(get_supabase_service)
+    supabase_service = Depends(get_supabase_dependency)
 ) -> Dict[str, Any]:
     """Registrar intento de juego"""
     try:
-        # Verificar que la sesión pertenezca al usuario
+        # Verificar que la sesión pertenezca al usuario y esté activa
         session = await supabase_service.get_game_session(request.session_id)
         if not session or session["user_id"] != current_user["id"]:
             raise HTTPException(
                 status_code=404,
                 detail="Sesión no encontrada"
             )
+        
+        # 🛡️ VERIFICAR QUE LA SESIÓN ESTÁ ACTIVA
+        if session.get("status") != "active":
+            logger.warning(f"🛡️ Intento ignorado - Sesión {request.session_id} no está activa (status: {session.get('status')})")
+            raise HTTPException(
+                status_code=400,
+                detail="La sesión de juego ya ha finalizado"
+            )
 
         # Registrar intento con nueva estructura
+        logger.info(f"[ATTEMPT] Registrando intento: target_word={request.target_word}, predicted_word={request.predicted_word}, is_correct={request.is_correct}")
+        
         success = await supabase_service.record_game_attempt(
             session_id=request.session_id,
             user_id=current_user["id"],
-            letter_id=request.letter_id,  # Usar letter_id en lugar de target_word
+            letter_id=request.letter_id,  # Para compatibilidad
             is_correct=request.is_correct,
             time_taken=request.time_taken,
-            confidence_score=request.confidence_score
+            confidence_score=request.confidence_score,
+            target_word=request.target_word,  # Palabra objetivo completa
+            predicted_word=request.predicted_word  # Palabra predicha completa
         )
 
         if not success:
@@ -288,7 +303,7 @@ async def record_game_attempt(
 
 @router.get("/letters")
 async def get_all_letters(
-    supabase_service = Depends(get_supabase_service)
+    supabase_service = Depends(get_supabase_dependency)
 ) -> Dict[str, Any]:
     """Obtener todas las letras del alfabeto"""
     try:
@@ -310,7 +325,7 @@ async def get_all_letters(
 @router.get("/letters/random/{count}")
 async def get_random_letters(
     count: int = 10,
-    supabase_service = Depends(get_supabase_service)
+    supabase_service = Depends(get_supabase_dependency)
 ) -> Dict[str, Any]:
     """Obtener letras aleatorias para el juego"""
     try:
@@ -343,7 +358,7 @@ async def get_random_letters(
 
 @router.get("/achievements")
 async def get_all_achievements(
-    supabase_service = Depends(get_supabase_service)
+    supabase_service = Depends(get_supabase_dependency)
 ) -> Dict[str, Any]:
     """Obtener todos los logros disponibles"""
     try:
@@ -366,7 +381,7 @@ async def get_all_achievements(
 async def end_game_session(
     request: dict,
     current_user: dict = Depends(get_current_user),  # Restaurar autenticación
-    supabase_service = Depends(get_supabase_service)
+    supabase_service = Depends(get_supabase_dependency)
 ) -> Dict[str, Any]:
     """Finalizar sesión de juego"""
     try:
@@ -379,13 +394,21 @@ async def end_game_session(
                 detail="session_id es requerido"
             )
         
-        # Verificar que la sesión existe
+        # Verificar que la sesión existe y está activa
         session = await supabase_service.get_game_session(session_id)
         if not session:
             raise HTTPException(
                 status_code=404,
                 detail="Sesión no encontrada"
             )
+        
+        # 🛡️ PROTEGER CONTRA MÚLTIPLES LLAMADAS - verificar si ya está finalizada
+        if session.get("status") != "active":
+            logger.info(f"🛡️ Sesión {session_id} ya fue finalizada anteriormente (status: {session.get('status')})")
+            return {
+                "status": "success", 
+                "message": "Sesión ya estaba finalizada"
+            }
             
         # Verificar que la sesión pertenece al usuario (restaurado)
         if session.get("user_id") != current_user.get("id"):
@@ -416,7 +439,7 @@ async def end_game_session(
 @router.get("/user/profile")
 async def get_user_profile(
     current_user: dict = Depends(get_current_user),
-    supabase_service = Depends(get_supabase_service)
+    supabase_service = Depends(get_supabase_dependency)
 ) -> Dict[str, Any]:
     """Obtener perfil del usuario"""
     try:
@@ -442,7 +465,7 @@ async def get_user_profile(
 
 @router.post("/debug/create-test-user")
 async def create_test_user(
-    supabase_service = Depends(get_supabase_service)
+    supabase_service = Depends(get_supabase_dependency)
 ) -> Dict[str, Any]:
     """Crear usuario de prueba para desarrollo"""
     try:
