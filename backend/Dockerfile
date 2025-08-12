@@ -56,4 +56,4 @@ EXPOSE $PORT
 ENV ENVIRONMENT=production
 
 # Comando de inicio (sin reload)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "$PORT"]
+CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT
