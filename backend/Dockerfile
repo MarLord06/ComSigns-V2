@@ -43,8 +43,12 @@ RUN pip install --no-cache-dir \
 # Instalar el resto de dependencias
 RUN pip install --no-cache-dir -r requirements.txt
 
+
 # Crear directorio para modelos y uploads
 RUN mkdir -p /app/models /app/uploads
+
+# Verificar que el modelo existe y fallar si no está
+RUN test -f /app/models/model.h5 || (echo "ERROR: model.h5 no encontrado en /app/models/" && exit 1)
 
 # Copiar el resto del código
 COPY . .
