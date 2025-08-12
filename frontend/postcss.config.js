@@ -3,8 +3,7 @@ module.exports = {
     require('@tailwindcss/postcss')({
       plugins: [
         require('tailwindcss'),
-        require('autoprefixer'),
-    require('new-plugin'),
+        require('autoprefixer')
       ],
     }),
   ],
