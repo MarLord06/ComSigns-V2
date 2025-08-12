@@ -2,7 +2,7 @@
 import { PredictionBase } from './realtime';
 import type { TranslationResponse } from '@/lib/services/translation.service';
 
-export interface HttpPredictionRaw extends TranslationResponse {}
+// Eliminar interfaz vacía para evitar error de lint
 
 export function mapHttpTranslationResponse(resp: TranslationResponse): PredictionBase | null {
   if (!resp || !resp.result) return null;

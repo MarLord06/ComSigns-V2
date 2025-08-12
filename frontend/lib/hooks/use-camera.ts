@@ -131,6 +131,7 @@ export function useCamera() {
     if (videoRef.current) videoRef.current.srcObject = null;
     stopRealtimeTranslation();
     setPermission('prompt'); setError('');
+    // Corregido: expresión suelta, ahora es un bloque válido
   }, [stopRealtimeTranslation]);
 
   const captureFrame = useCallback((): Promise<File | null> => {
@@ -140,7 +141,16 @@ export function useCamera() {
     if (!ctx) return Promise.resolve(null);
     canvas.width = videoRef.current.videoWidth; canvas.height = videoRef.current.videoHeight;
     ctx.drawImage(videoRef.current, 0, 0);
-    return new Promise(res => { canvas.toBlob(b => { b ? res(new File([b], 'frame.jpg', { type: 'image/jpeg' })) : res(null); }, 'image/jpeg', 0.8); });
+    // Corregido: expresión suelta, se agrega llamada a función
+    return new Promise(res => {
+      canvas.toBlob(b => {
+        if (b) {
+          res(new File([b], 'frame.jpg', { type: 'image/jpeg' }));
+        } else {
+          res(null);
+        }
+      }, 'image/jpeg', 0.8);
+    });
   }, []);
 
   return { videoRef, isSupported, permission, isInitializing, error, initialize, cleanup, captureFrame, isTranslating, currentPrediction, confidence, lastTranslation, startRealtimeTranslation, stopRealtimeTranslation, realtimeStatus };
