@@ -1,614 +1,941 @@
+/**
+ * Página de juego refactorizada usando gamificación
+ */
+
 "use client"
 
+import { useState, useEffect, useCallback, useRef } from "react"
+import { AppLayout, HeroSection } from '@/components/layout'
+import { GameLevelCard, StatsCard } from '@/components/shared'
+import { useGameMode } from '@/lib/hooks'
+import { useAuth } from '@/lib/auth-context'
+import { GameLevel } from '@/lib/services/gamification.service'
+import { 
+  TranslationLayout,
+  CameraView,
+  TranslationResult,
+  ControlPanel,
+  CameraViewRef
+} from '@/components/translation'
+import { useBackendConnection } from '@/lib/hooks'
+import { useRealtimePrediction } from '@/lib/hooks/use-realtime-prediction'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { AppLayout } from "@/components/layout"
 import {
-  Hand,
-  X,
-  Play,
-  Target,
-  Gamepad2,
-  Lock,
-  Star,
   Trophy,
   Zap,
   Heart,
   Clock,
   RotateCcw,
-  Home,
   CheckCircle,
   XCircle,
+  Star,
+  Play,
+  Pause,
+  Home
 } from "lucide-react"
-import Link from "next/link"
-import { useState, useRef, useEffect, useCallback } from "react"
 
-// Definición de niveles
-interface GameLevel {
-  id: number
-  name: string
-  description: string
-  color: string
-  bgColor: string
-  unlocked: boolean
-  completed: boolean
-  stars: number
-  wordsLength: [number, number] // [min, max] longitud de palabras
-  timeLimit: number // segundos por palabra
-  lives: number
-  pointsMultiplier: number
+// Tipos de estadísticas del juego
+interface GameStats {
+  totalScore: number
+  gamesPlayed: number
+  accuracy: number
+  bestStreak: number
+  levelsCompleted: number
 }
-
-const GAME_LEVELS: GameLevel[] = [
-  {
-    id: 1,
-    name: "Principiante",
-    description: "Palabras simples de 2-3 letras",
-    color: "text-green-600",
-    bgColor: "bg-green-500",
-    unlocked: true,
-    completed: true,
-    stars: 3,
-    wordsLength: [2, 3],
-    timeLimit: 15,
-    lives: 5,
-    pointsMultiplier: 1,
-  },
-  {
-    id: 2,
-    name: "Intermedio",
-    description: "Palabras de 4-5 letras",
-    color: "text-blue-600",
-    bgColor: "bg-blue-500",
-    unlocked: true,
-    completed: false,
-    stars: 0,
-    wordsLength: [4, 5],
-    timeLimit: 20,
-    lives: 4,
-    pointsMultiplier: 2,
-  },
-  {
-    id: 3,
-    name: "Avanzado",
-    description: "Palabras complejas de 6-7 letras",
-    color: "text-purple-600",
-    bgColor: "bg-purple-500",
-    unlocked: false,
-    completed: false,
-    stars: 0,
-    wordsLength: [6, 7],
-    timeLimit: 25,
-    lives: 3,
-    pointsMultiplier: 3,
-  },
-  {
-    id: 4,
-    name: "Experto",
-    description: "Palabras muy difíciles de 8+ letras",
-    color: "text-red-600",
-    bgColor: "bg-red-500",
-    unlocked: false,
-    completed: false,
-    stars: 0,
-    wordsLength: [8, 12],
-    timeLimit: 30,
-    lives: 2,
-    pointsMultiplier: 5,
-  },
-]
-
-// Banco de palabras por nivel
-const WORDS_BY_LEVEL: { [key: number]: string[] } = {
-  1: ["SOL", "MAR", "PAN", "LUZ", "PAZ", "SÍ", "NO", "YO", "TÚ", "ÉL"],
-  2: ["CASA", "AGUA", "AMOR", "VIDA", "MESA", "LIBRO", "FLOR", "CIELO", "TIERRA", "FUEGO"],
-  3: ["FAMILIA", "ESCUELA", "TRABAJO", "AMISTAD", "LIBERTAD", "JUSTICIA", "BELLEZA", "VERDAD"],
-  4: ["COMUNICACIÓN", "INTELIGENCIA", "CREATIVIDAD", "RESPONSABILIDAD", "SOLIDARIDAD", "PERSEVERANCIA"],
-}
-
-type GameState = "menu" | "playing" | "paused" | "gameOver" | "levelComplete"
 
 export default function GamePage() {
+  // Hook de autenticación para acceder al perfil del usuario
+  const { user, profile, stats: userStats } = useAuth();
+  
+  // Hook principal del juego (conectado al backend)
+  const gameMode = useGameMode()
+  
+  // Estados de la aplicación
   const [selectedLevel, setSelectedLevel] = useState<GameLevel | null>(null)
-  const [gameState, setGameState] = useState<GameState>("menu")
-  const [currentWord, setCurrentWord] = useState("")
-  const [userInput, setUserInput] = useState("")
-  const [score, setScore] = useState(0)
-  const [lives, setLives] = useState(5)
-  const [timeLeft, setTimeLeft] = useState(15)
-  const [wordsCompleted, setWordsCompleted] = useState(0)
-  const [streak, setStreak] = useState(0)
-  const [isRecording, setIsRecording] = useState(false)
-  const [confidence, setConfidence] = useState(0)
+  const [isCameraActive, setIsCameraActive] = useState(false)
+  
+  // Referencias
+  const cameraRef = useRef<CameraViewRef>(null)
+  
+  // Sistema de buffer para palabras (SIMPLIFICADO CON CONTROL MANUAL)
+  const [wordBuffer, setWordBuffer] = useState<string>('')
+  const [bufferTimeout, setBufferTimeout] = useState<NodeJS.Timeout | null>(null)
+  
+  // Referencias para evitar dependencias en useCallback
+  const wordBufferRef = useRef<string>('')
+  const bufferTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Hooks de cámara y conexión - versión simplificada
+  const [currentPrediction, setCurrentPrediction] = useState<string>('')
+  const [confidence, setConfidence] = useState<number>(0)
+  const [isTranslating, setIsTranslating] = useState(false)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const isTranslatingRef = useRef(false) // REF PARA EVITAR CLOSURE STALE
+  const frameIntervalMs = useRef<number>(4000) // 4 segundos inicial (modo idle)
+  const lastFrameTime = useRef<number>(0)
+  
+  // Estado para el sistema inteligente de intervalos
+  const [smartInterval, setSmartInterval] = useState(false)
+  
+  // Hook para conexión realtime
+  const { 
+    status: realtimeStatus, 
+    lastPrediction: realtimePrediction, 
+    error: realtimeError, 
+    connect: connectRealtime, 
+    disconnect: disconnectRealtime, 
+    sendFrame 
+  } = useRealtimePrediction({ autoConnect: false, log: true })
+  
+  const { isConnected } = useBackendConnection()
+  
+  // Estado local para cámara
+  const [cameraError, setCameraError] = useState('');
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-
-  // Generar palabra aleatoria según el nivel
-  const generateRandomWord = useCallback((level: GameLevel) => {
-    const words = WORDS_BY_LEVEL[level.id] || WORDS_BY_LEVEL[1]
-    const randomIndex = Math.floor(Math.random() * words.length)
-    return words[randomIndex]
-  }, [])
-
-  // Iniciar juego
-  const startGame = useCallback(
-    (level: GameLevel) => {
-      setSelectedLevel(level)
-      setGameState("playing")
-      setScore(0)
-      setLives(level.lives)
-      setWordsCompleted(0)
-      setStreak(0)
-      setUserInput("")
-
-      const firstWord = generateRandomWord(level)
-      setCurrentWord(firstWord)
-      setTimeLeft(level.timeLimit)
-
-      // Iniciar timer
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            // Tiempo agotado
-            setLives((prevLives) => {
-              const newLives = prevLives - 1
-              if (newLives <= 0) {
-                setGameState("gameOver")
-              } else {
-                // Nueva palabra
-                const newWord = generateRandomWord(level)
-                setCurrentWord(newWord)
-                setUserInput("")
-                setStreak(0)
-                return newLives
-              }
-              return newLives
-            })
-            return level.timeLimit
-          }
-          return prev - 1
-        })
-      }, 1000)
-    },
-    [generateRandomWord],
-  )
-
-  // Verificar palabra
-  const checkWord = useCallback(() => {
-    if (!selectedLevel) return
-
-    const isCorrect = userInput.toUpperCase() === currentWord.toUpperCase()
-
-    if (isCorrect) {
-      // Palabra correcta
-      const points = selectedLevel.pointsMultiplier * 100 + streak * 10 + timeLeft * 5
-      setScore((prev) => prev + points)
-      setWordsCompleted((prev) => prev + 1)
-      setStreak((prev) => prev + 1)
-
-      // Nueva palabra
-      const newWord = generateRandomWord(selectedLevel)
-      setCurrentWord(newWord)
-      setUserInput("")
-      setTimeLeft(selectedLevel.timeLimit)
-
-      // Verificar si completó el nivel (ejemplo: 10 palabras)
-      if (wordsCompleted + 1 >= 10) {
-        setGameState("levelComplete")
-        if (timerRef.current) clearInterval(timerRef.current)
-      }
+  // ========================================
+  // SISTEMA DE BUFFER PARA PALABRAS (MEJORADO)
+  // ========================================
+  
+  const checkWordMatch = useCallback((word: string) => {
+    if (!gameMode.currentWord) return;
+    
+    const targetWord = gameMode.currentWord.toUpperCase();
+    const predictedWord = word.toUpperCase();
+    
+    console.log('[WORD_CHECK] 🔍 Comparando:', predictedWord, 'vs', targetWord);
+    console.log('[WORD_CHECK] 📊 Longitudes:', predictedWord.length, 'vs', targetWord.length);
+    
+    if (predictedWord === targetWord) {
+      console.log('[WORD_CHECK] ✅ ¡Palabra correcta!');
+      gameMode.processCorrectAnswer(targetWord);
+      clearWordBuffer(); // Limpiar buffer al acertar
+    } else if (predictedWord.length === targetWord.length) {
+      console.log('[WORD_CHECK] ❌ Palabra incorrecta (longitud completa)');
+      // Palabra completa pero incorrecta - perder una vida y limpiar buffer
+      // Por ahora solo limpiamos el buffer, el sistema de vidas se maneja en el useEffect
+      clearWordBuffer(); // Limpiar buffer para nuevo intento
     } else {
-      // Palabra incorrecta
-      setLives((prev) => {
-        const newLives = prev - 1
-        if (newLives <= 0) {
-          setGameState("gameOver")
-          if (timerRef.current) clearInterval(timerRef.current)
+      console.log('[WORD_CHECK] ⏳ Palabra incompleta, continuando...');
+      // Palabra incompleta, no hacer nada (continuar recolectando letras)
+    }
+  }, [gameMode]);
+  
+  const clearBufferTimeout = useCallback(() => {
+    if (bufferTimeoutRef.current) {
+      clearTimeout(bufferTimeoutRef.current);
+      setBufferTimeout(null);
+    }
+  }, []);
+  
+  // Función para ajustar dinámicamente la frecuencia de captura
+  const adjustFrameInterval = useCallback((reason: 'idle' | 'waiting' | 'active') => {
+    let newInterval: number;
+    
+    switch (reason) {
+      case 'active':
+        // Cuando hay actividad (nueva letra detectada), capturar más frecuentemente
+        newInterval = 1000; // 1 segundo
+        break;
+      case 'waiting':
+        // Cuando esperamos confirmación de letra, frecuencia media
+        newInterval = 2000; // 2 segundos
+        break;
+      case 'idle':
+      default:
+        // Estado idle o normal, frecuencia más baja
+        newInterval = 4000; // 4 segundos
+        break;
+    }
+    
+    if (frameIntervalMs.current !== newInterval) {
+      frameIntervalMs.current = newInterval;
+      console.log('[FRAME_INTERVAL] 📏 Ajustando intervalo de captura a:', newInterval, 'ms, razón:', reason);
+      
+      // Reiniciar el intervalo con la nueva frecuencia si está activo
+      if (intervalRef.current && isTranslatingRef.current) {
+        clearInterval(intervalRef.current);
+        // Nota: startFrameCapture se define después, se llamará cuando sea necesario
+      }
+    }
+  }, []);
+  
+  const clearWordBuffer = useCallback(() => {
+    console.log('[BUFFER] 🗑️  Limpiando buffer completo');
+    setWordBuffer('');
+    clearBufferTimeout();
+    
+    // Volver al modo idle después de limpiar
+    adjustFrameInterval('idle');
+  }, [clearBufferTimeout, adjustFrameInterval]);
+  
+  // Nueva función: Agregar predicción actual al buffer manualmente
+  const addCurrentPredictionToBuffer = useCallback(() => {
+    if (!currentPrediction || currentPrediction === '?' || confidence < 0.7) {
+      console.log('[BUFFER] ⚠️  No hay predicción válida para agregar:', currentPrediction, confidence);
+      return;
+    }
+    
+    if (!gameMode.currentWord) {
+      console.log('[BUFFER] ⚠️  No hay palabra objetivo');
+      return;
+    }
+    
+    const targetLength = gameMode.currentWord.length;
+    const currentBuffer = wordBufferRef.current;
+    
+    // Si el buffer ya está completo, no agregar más letras
+    if (currentBuffer.length >= targetLength) {
+      console.log('[BUFFER] ⚠️  Buffer completo, no se puede agregar más letras');
+      return;
+    }
+    
+    const newBuffer = currentBuffer + currentPrediction;
+    setWordBuffer(newBuffer);
+    wordBufferRef.current = newBuffer;
+    
+    console.log('[BUFFER] ✅ Letra agregada manualmente:', currentPrediction, 'Nuevo buffer:', newBuffer);
+    
+    // Ajustar intervalo para captura activa tras agregar letra
+    adjustFrameInterval('active');
+    
+    // Auto-comparar si el buffer alcanza la longitud objetivo
+    if (newBuffer.length === targetLength) {
+      console.log('[BUFFER] 🎯 Buffer completado, verificando palabra...');
+      setTimeout(() => checkWordMatch(newBuffer), 500);
+    } else {
+      // Configurar timeout para auto-completar si el usuario no continúa
+      clearBufferTimeout();
+      const timeout = setTimeout(() => {
+        console.log('[BUFFER] ⏱️  Timeout de inactividad, enviando palabra parcial:', newBuffer);
+        if (newBuffer.length > 0) {
+          checkWordMatch(newBuffer);
         }
-        return newLives
-      })
-      setStreak(0)
-      setUserInput("")
+        // Volver al modo idle después del timeout
+        adjustFrameInterval('idle');
+      }, 5000); // 5 segundos de inactividad
+      setBufferTimeout(timeout);
+      bufferTimeoutRef.current = timeout;
     }
-  }, [userInput, currentWord, selectedLevel, streak, timeLeft, wordsCompleted, generateRandomWord])
-
-  // Simular reconocimiento de seña
-  const simulateRecognition = useCallback(() => {
-    // Simular reconocimiento de letras individuales
-    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    const randomLetter = letters[Math.floor(Math.random() * letters.length)]
-    const newConfidence = Math.random() * 0.4 + 0.6
-
-    setConfidence(newConfidence)
-
-    if (newConfidence > 0.8) {
-      setUserInput((prev) => prev + randomLetter)
+  }, [currentPrediction, confidence, gameMode.currentWord, clearBufferTimeout, checkWordMatch, adjustFrameInterval]);
+  
+  
+  const sendCurrentBuffer = useCallback(() => {
+    const currentBuffer = wordBufferRef.current;
+    console.log('[BUFFER] 📤 Enviando buffer manualmente:', currentBuffer);
+    if (currentBuffer.length > 0) {
+      checkWordMatch(currentBuffer);
     }
-  }, [])
+  }, [checkWordMatch]);
+  
+  const startFrameCapture = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
 
-  // Limpiar timer al desmontar
+    intervalRef.current = setInterval(() => {
+      const now = Date.now();
+      const timeSinceLastFrame = now - lastFrameTime.current;
+      
+      console.log('[FRAME_CAPTURE] 📹 Intentando capturar frame...', {
+        cameraRef: !!cameraRef.current,
+        isTranslating: isTranslatingRef.current,
+        captureFrameMethod: !!cameraRef.current?.captureFrame,
+        intervalMs: frameIntervalMs.current,
+        timeSinceLastFrame
+      });
+      
+      if (cameraRef.current && isTranslatingRef.current) {
+        lastFrameTime.current = now;
+        
+        cameraRef.current.captureFrame().then(file => {
+          console.log('[FRAME_CAPTURE] ✅ Frame capturado:', !!file, file ? `${file.size} bytes` : 'null');
+          if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64 = reader.result as string;
+              const base64Data = base64.split(',')[1];
+              if (base64Data) {
+                console.log('[FRAME_SEND] 📡 Enviando frame al WebSocket:', `${base64Data.length} chars`);
+                sendFrame(base64Data);
+              } else {
+                console.warn('[FRAME_SEND] ⚠️  No se pudo extraer base64Data');
+              }
+            };
+            reader.readAsDataURL(file);
+          }
+        }).catch(error => {
+          console.error('[CAMERA] ❌ Error capturando frame:', error);
+        });
+      } else {
+        console.warn('[FRAME_CAPTURE] ⚠️  No se puede capturar frame:', {
+          cameraRef: !!cameraRef.current,
+          isTranslating: isTranslatingRef.current
+        });
+      }
+    }, frameIntervalMs.current);
+    
+    console.log('[FRAME_CAPTURE] ⏱️  Intervalo de captura iniciado con', frameIntervalMs.current, 'ms');
+  }, [sendFrame]);
+  
+  const startRealtimeTranslation = useCallback(async () => {
+    console.log('[TRANSLATION] 🚀 startRealtimeTranslation llamado, isTranslating:', isTranslating, 'ref:', isTranslatingRef.current);
+    
+    if (isTranslating || isTranslatingRef.current) {
+      console.log('[TRANSLATION] ⚠️  Ya está traduciendo, saliendo...', {isTranslating, isTranslatingRefCurrent: isTranslatingRef.current});
+      return;
+    }
+    
+    console.log('[TRANSLATION] ▶️  Iniciando traducción realtime...');
+    
+    try {
+      console.log('[TRANSLATION] 🎛️  Estableciendo isTranslating = true');
+      setIsTranslating(true);
+      isTranslatingRef.current = true; // ACTUALIZAR REF TAMBIÉN
+      setCameraError('');
+      
+      // Limpiar estado
+      setWordBuffer('');
+      setCurrentPrediction('');
+      setConfidence(0);
+      clearWordBuffer(); // Limpiar sistema de buffer completo
+      
+      console.log('[TRANSLATION] 🌐 Conectando al servicio realtime...');
+      // Conectar al servicio realtime
+      await connectRealtime();
+      console.log('[TRANSLATION] ✅ Conexión realtime completada');
+      
+      // Inicializar captura de frames con sistema inteligente
+      adjustFrameInterval('idle'); // Comenzar en modo idle
+      startFrameCapture();
+      
+      console.log('[TRANSLATION] ⏱️  Sistema de captura inteligente configurado');
+      console.log('[TRANSLATION] 📊 Estado final - isTranslating:', isTranslating, 'ref:', isTranslatingRef.current, 'intervalRef:', !!intervalRef.current);
+      console.log('[TRANSLATION] 🎉 Traducción realtime iniciada exitosamente');
+      
+    } catch (error) {
+      console.error('[TRANSLATION] ❌ Error al iniciar traducción:', error);
+      setIsTranslating(false);
+      isTranslatingRef.current = false;
+      setCameraError('Error al conectar con el servicio de traducción');
+    }
+  }, [isTranslating, connectRealtime, sendFrame, clearWordBuffer, adjustFrameInterval, startFrameCapture]);
+  
+  const stopRealtimeTranslation = useCallback(async () => {
+    console.log('[TRANSLATION] 🛑 Deteniendo traducción realtime...', {
+      isTranslating, 
+      isTranslatingRefCurrent: isTranslatingRef.current,
+      hasInterval: !!intervalRef.current
+    });
+    
+    setIsTranslating(false);
+    isTranslatingRef.current = false; // ACTUALIZAR REF TAMBIÉN
+    
+    // Limpiar intervalo
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+      console.log('[TRANSLATION] 🗑️  Intervalo limpiado');
+    }
+    
+    // Limpiar buffer y timeout
+    if (bufferTimeout) {
+      clearTimeout(bufferTimeout);
+      setBufferTimeout(null);
+      console.log('[TRANSLATION] 🗑️  Buffer timeout limpiado');
+    }
+    
+    setWordBuffer('');
+    setCurrentPrediction('');
+    setConfidence(0);
+    clearWordBuffer(); // Limpiar sistema de buffer completo
+    
+    // Volver al modo idle
+    adjustFrameInterval('idle');
+    
+    // Desconectar del servicio realtime
+    try {
+      await disconnectRealtime();
+      console.log('[TRANSLATION] ✅ Traducción realtime detenida exitosamente');
+    } catch (error) {
+      console.error('[TRANSLATION] ❌ Error al desconectar:', error);
+    }
+  }, [disconnectRealtime, clearWordBuffer, adjustFrameInterval]); // Añadir dependencias necesarias
+
+  // ========================================
+  // EFECTOS
+  // ========================================
+
+  // Log estado del juego para depuración
   useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
+    console.log('[GAME] State changed - gameState:', gameMode.gameState, 'currentLevel:', gameMode.currentLevel, 'levels:', gameMode.levels.length)
+  }, [gameMode.gameState, gameMode.currentLevel, gameMode.levels])
+
+  // Cargar niveles al montar el componente
+  useEffect(() => {
+    gameMode.loadLevels()
   }, [])
 
-  // Reiniciar juego
-  const resetGame = () => {
-    if (timerRef.current) clearInterval(timerRef.current)
-    setGameState("menu")
+  // Sincronizar ref con estado (NUEVO)
+  useEffect(() => {
+    isTranslatingRef.current = isTranslating;
+  }, [isTranslating]);
+
+  // Sincronizar refs del buffer (NUEVO)
+  useEffect(() => {
+    wordBufferRef.current = wordBuffer;
+  }, [wordBuffer]);
+
+  useEffect(() => {
+    bufferTimeoutRef.current = bufferTimeout;
+  }, [bufferTimeout]);
+
+  // Procesar predicciones en tiempo real (SIMPLIFICADO - SOLO MOSTRAR)
+  useEffect(() => {
+    if (!realtimePrediction) return
+    
+    const letter = realtimePrediction.letter || ''
+    const conf = realtimePrediction.confidence || 0
+    
+    console.log('[PREDICTION] 📡 Letra recibida:', letter, 'Confianza:', conf);
+    
+    if (conf >= 0.7 && letter && letter !== '?') {
+      setCurrentPrediction(letter)
+      setConfidence(conf)
+      console.log('[PREDICTION] ✅ Predicción válida mostrada:', letter, conf);
+    } else {
+      setCurrentPrediction('?')
+      setConfidence(conf)
+      console.log('[PREDICTION] 🤷 Predicción de baja confianza:', letter, conf);
+    }
+    
+    // Ajustar intervalo basado en actividad de predicción
+    if (gameMode.gameState === 'playing') {
+      if (conf >= 0.7 && letter && letter !== '?') {
+        adjustFrameInterval('active'); // Predicción válida = más frecuente
+      } else {
+        adjustFrameInterval('idle'); // Predicción inválida = menos frecuente
+      }
+    }
+  }, [realtimePrediction, gameMode.gameState, adjustFrameInterval]);
+
+  // Finalizar juego cuando no quedan vidas
+  useEffect(() => {
+    if (gameMode.gameProgress.lives <= 0 && gameMode.gameState === 'playing') {
+      gameMode.endGame(false)
+    }
+  }, [gameMode.gameProgress.lives, gameMode.gameState])
+
+  // Manejar traducción según el estado del juego (CORREGIDO)
+  useEffect(() => {
+    console.log('[GAME] 🔄 Estado del juego cambió a:', gameMode.gameState, 'isTranslating:', isTranslating, 'currentLevel:', gameMode.currentLevel?.name);
+    
+    if (gameMode.gameState === 'playing' && !isTranslating) {
+      console.log('[GAME] ▶️  Iniciando traducción automáticamente...');
+      startRealtimeTranslation();
+    } else if (gameMode.gameState === 'paused' && isTranslating) {
+      console.log('[GAME] ⏸️  Pausando traducción automáticamente...');
+      stopRealtimeTranslation();
+    } else if (gameMode.gameState === 'menu' && isTranslating) {
+      console.log('[GAME] 🏠 Volviendo al menú, deteniendo traducción...');
+      stopRealtimeTranslation();
+    }
+  }, [gameMode.gameState, isTranslating, startRealtimeTranslation, stopRealtimeTranslation]);
+
+  // Cleanup al desmontar el componente
+  useEffect(() => {
+    console.log('[GAME] Componente montado - gameState:', gameMode.gameState)
+    return () => {
+      console.log('[GAME] ⚠️  COMPONENTE DESMONTÁNDOSE - gameState:', gameMode.gameState, 'currentLevel:', gameMode.currentLevel?.name)
+      console.trace('[GAME] Stack trace del desmontaje:')
+      stopRealtimeTranslation()
+      setIsCameraActive(false)
+      clearWordBuffer()
+    }
+  }, []) // SIN DEPENDENCIAS PARA EVITAR RE-RENDERS
+
+  // ========================================
+  // HANDLERS
+  // ========================================
+
+  const handleLevelSelect = useCallback(async (level: GameLevel) => {
+    console.log('[GAME] 🎯 Level selected:', level)
+    console.log('[GAME] Before startGame - gameState:', gameMode.gameState, 'currentLevel:', gameMode.currentLevel)
+    
+    setSelectedLevel(level)
+    await gameMode.startGame(level.id)
+    
+    console.log('[GAME] After startGame - gameState:', gameMode.gameState, 'currentLevel:', gameMode.currentLevel)
+    
+    setIsCameraActive(true)
+    // NO llamar startRealtimeTranslation aquí - deja que el useEffect lo maneje automáticamente
+    console.log('[GAME] 📷 Cámara activada, esperando a que useEffect inicie traducción...')
+  }, [gameMode])
+
+  const handleBackToMenu = useCallback(() => {
+    gameMode.resetGame()
+    setIsCameraActive(false)
+    stopRealtimeTranslation()
     setSelectedLevel(null)
+    clearWordBuffer()
+  }, [gameMode, stopRealtimeTranslation, clearWordBuffer])
+
+  const handleGameAction = useCallback((action: 'pause' | 'resume' | 'restart' | 'quit') => {
+    switch (action) {
+      case 'pause':
+        console.log('[GAME] Pausando juego...');
+        gameMode.pauseGame();
+        if (isTranslating) {
+          stopRealtimeTranslation();
+        }
+        break;
+      case 'resume':
+        console.log('[GAME] Reanudando juego...');
+        gameMode.resumeGame();
+        if (!isTranslating && gameMode.gameState !== 'paused') {
+          startRealtimeTranslation();
+        }
+        break;
+      case 'restart':
+        console.log('[GAME] Reiniciando juego...');
+        if (gameMode.currentLevel) {
+          gameMode.startGame(gameMode.currentLevel.id);
+          // Reiniciar traducción si no está activa
+          if (!isTranslating) {
+            startRealtimeTranslation();
+          }
+        }
+        break;
+      case 'quit':
+        console.log('[GAME] Saliendo del juego...');
+        handleBackToMenu();
+        break;
+    }
+  }, [gameMode, isTranslating, stopRealtimeTranslation, startRealtimeTranslation, handleBackToMenu]);
+
+  // ========================================
+  // ESTADÍSTICAS (obtenidas del perfil real del usuario)
+  // ========================================
+  
+  const stats: GameStats = {
+    totalScore: profile?.total_points || 0,
+    gamesPlayed: profile?.games_played || 0,
+    accuracy: Math.round(profile?.accuracy_percentage || 0),
+    bestStreak: profile?.longest_streak || 0,
+    levelsCompleted: gameMode.levels.filter((l: any) => l.completed).length
   }
 
-  // Pantalla de juego
-  if (gameState === "playing" && selectedLevel) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
-        {/* Game Header */}
-        <header className="px-4 lg:px-6 h-16 flex items-center border-b bg-white/95 backdrop-blur sticky top-0 z-50">
-          <Button variant="ghost" onClick={resetGame} className="mr-4">
-            <Home className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-4">
-            <Badge className={`${selectedLevel.bgColor} text-white`}>{selectedLevel.name}</Badge>
-            <div className="flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-yellow-600" />
-              <span className="font-bold">{score.toLocaleString()}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-orange-600" />
-              <span className="font-bold">x{streak}</span>
-            </div>
-          </div>
-          <div className="ml-auto flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              {Array.from({ length: selectedLevel.lives }).map((_, i) => (
-                <Heart key={i} className={`h-5 w-5 ${i < lives ? "fill-red-500 text-red-500" : "text-gray-300"}`} />
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-blue-600" />
-              <span className={`font-bold ${timeLeft <= 5 ? "text-red-600" : "text-blue-600"}`}>{timeLeft}s</span>
-            </div>
-          </div>
-        </header>
+  // ========================================
+  // RENDER
+  // ========================================
 
-        <main className="flex-1 p-4 md:p-6">
-          <div className="max-w-6xl mx-auto">
-            {/* Progress */}
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Palabra {wordsCompleted + 1} de 10</span>
-                <span className="text-sm text-gray-600">{Math.round((wordsCompleted / 10) * 100)}%</span>
-              </div>
-              <Progress value={(wordsCompleted / 10) * 100} className="h-2" />
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Word Challenge */}
-              <Card className="lg:col-span-1">
-                <CardHeader>
-                  <CardTitle className="text-center text-3xl font-bold text-gray-900">{currentWord}</CardTitle>
-                  <CardDescription className="text-center">
-                    Deletrea esta palabra usando lenguaje de señas
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {/* User Input Display */}
-                    <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 min-h-[60px]">
-                      <div className="text-center">
-                        <div className="text-2xl font-mono font-bold text-gray-900 mb-2">{userInput || "..."}</div>
-                        <div className="text-sm text-gray-600">
-                          {userInput.length} / {currentWord.length} letras
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 justify-center">
-                      <Button
-                        onClick={checkWord}
-                        disabled={userInput.length !== currentWord.length}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Verificar
-                      </Button>
-                      <Button variant="outline" onClick={() => setUserInput("")}>
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                        Limpiar
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Camera */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Cámara de Señas</CardTitle>
-                  <CardDescription>Realiza las señas letra por letra</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="relative bg-gray-900 aspect-video">
-                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-
-                    {/* Recording Indicator */}
-                    {isRecording && (
-                      <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                        REC
-                      </div>
-                    )}
-
-                    {/* Confidence */}
-                    {confidence > 0 && (
-                      <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-                        {Math.round(confidence * 100)}%
-                      </div>
-                    )}
-
-                    {/* Next Letter Hint */}
-                    <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-                      Siguiente: {currentWord[userInput.length] || "✓"}
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-gray-50 border-t">
-                    <div className="flex justify-center">
-                      <Button
-                        onClick={() => {
-                          setIsRecording(!isRecording)
-                          if (!isRecording) {
-                            setTimeout(simulateRecognition, 1000)
-                          }
-                        }}
-                        className={isRecording ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"}
-                      >
-                        {isRecording ? (
-                          <>
-                            <X className="h-4 w-4 mr-2" />
-                            Detener
-                          </>
-                        ) : (
-                          <>
-                            <Play className="h-4 w-4 mr-2" />
-                            Capturar Seña
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </main>
+  return (
+    <AppLayout currentPage="game">
+      {/* Debug info */}
+      <div className="mb-4 p-2 bg-yellow-100 rounded text-xs">
+        Debug: gameState="{gameMode.gameState}" currentLevel={gameMode.currentLevel ? gameMode.currentLevel.name : 'null'} levels={gameMode.levels.length}
+        <br />
+        Buffer: "{wordBuffer}" ({wordBuffer.length}/{gameMode.currentWord?.length || 0}) 
+        | Predicción actual: "{currentPrediction}" ({confidence.toFixed(2)})
       </div>
-    )
-  }
 
-  // Pantalla de Game Over
-  if (gameState === "gameOver") {
-    return (
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-red-50 via-white to-gray-50">
-        <main className="flex-1 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardContent className="p-8 text-center">
-              <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Juego Terminado!</h2>
-              <p className="text-gray-600 mb-4">Has completado {wordsCompleted} palabras</p>
-              <div className="space-y-2 mb-6">
-                <div className="flex justify-between">
-                  <span>Puntuación Final:</span>
-                  <span className="font-bold">{score.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Mejor Racha:</span>
-                  <span className="font-bold">x{streak}</span>
-                </div>
+      {/* PANTALLA INICIAL */}
+      {gameMode.gameState === 'menu' && (
+        <>
+          {/* Hero Section */}
+          <HeroSection
+            title="🎮 Modo Juego"
+            subtitle="Desafía tus habilidades con niveles progresivos"
+          />
+
+          {/* Mensaje de error */}
+          {gameMode.error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600">{gameMode.error}</p>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {gameMode.isLoading && (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <span className="ml-4 text-gray-600">Cargando niveles...</span>
+            </div>
+          )}
+
+          {/* Estadísticas del usuario */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4">📊 Tus Estadísticas</h2>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <StatsCard
+                title="Puntos Totales"
+                value={stats.totalScore.toString()}
+                icon={Zap}
+              />
+              <StatsCard
+                title="Partidas"
+                value={stats.gamesPlayed.toString()}
+                icon={Trophy}
+              />
+              <StatsCard
+                title="Precisión"
+                value={`${stats.accuracy}%`}
+                icon={CheckCircle}
+              />
+              <StatsCard
+                title="Mejor Racha"
+                value={stats.bestStreak.toString()}
+                icon={Star}
+              />
+              <StatsCard
+                title="Niveles"
+                value={`${stats.levelsCompleted}/${gameMode.levels.length}`}
+                icon={Trophy}
+              />
+            </div>
+          </div>
+
+          {/* Selección de niveles */}
+          <div>
+            <h2 className="text-2xl font-bold mb-4">🎯 Selecciona un Nivel</h2>
+            
+            {gameMode.isLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin inline-block w-8 h-8 border-4 border-current border-t-transparent text-blue-600 rounded-full mb-4" />
+                <p className="text-gray-500">Cargando niveles...</p>
               </div>
-              <div className="flex gap-2">
-                <Button onClick={resetGame} variant="outline" className="flex-1 bg-transparent">
-                  <Home className="h-4 w-4 mr-2" />
-                  Menú
-                </Button>
-                <Button
-                  onClick={() => selectedLevel && startGame(selectedLevel)}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                >
+            ) : gameMode.error ? (
+              <div className="text-center py-8">
+                <p className="text-red-500 mb-4">Error cargando niveles: {gameMode.error}</p>
+                <Button onClick={() => gameMode.loadLevels()}>
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Reintentar
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    )
-  }
-
-  // Pantalla de Nivel Completado
-  if (gameState === "levelComplete") {
-    return (
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-yellow-50 via-white to-green-50">
-        <main className="flex-1 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardContent className="p-8 text-center">
-              <Trophy className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Nivel Completado!</h2>
-              <p className="text-gray-600 mb-4">Has completado el nivel {selectedLevel?.name}</p>
-              <div className="flex justify-center gap-1 mb-6">
-                {[1, 2, 3].map((star) => (
-                  <Star key={star} className="h-8 w-8 fill-yellow-400 text-yellow-400" />
+            ) : gameMode.levels.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No hay niveles disponibles</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {gameMode.levels.map((level) => (
+                  <GameLevelCard
+                    key={level.id}
+                    id={level.id}
+                    name={level.name}
+                    description={level.description}
+                    color={level.difficulty === 'easy' ? 'text-green-600' : level.difficulty === 'medium' ? 'text-blue-600' : 'text-red-600'}
+                    bgColor={level.difficulty === 'easy' ? 'bg-green-500' : level.difficulty === 'medium' ? 'bg-blue-500' : 'bg-red-500'}
+                    unlocked={level.unlocked}
+                    completed={level.completed}
+                    stars={level.stars}
+                    onSelect={() => handleLevelSelect(level)}
+                  />
                 ))}
               </div>
-              <div className="space-y-2 mb-6">
-                <div className="flex justify-between">
-                  <span>Puntuación Final:</span>
-                  <span className="font-bold">{score.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Palabras Completadas:</span>
-                  <span className="font-bold">{wordsCompleted}</span>
-                </div>
-              </div>
-              <Button onClick={resetGame} className="w-full bg-green-600 hover:bg-green-700">
-                <Home className="h-4 w-4 mr-2" />
-                Volver al Menú
-              </Button>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    )
-  }
-
-  // Menú principal de selección de niveles
-  return (
-    <AppLayout currentPage="game">
-      <div className="bg-gradient-to-br from-green-50 via-white to-blue-50 min-h-screen">
-        <main className="p-4 md:p-6" id="main-content" role="main">
-        <div className="max-w-6xl mx-auto">
-          {/* Page Header */}
-          <div className="text-center mb-12">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Gamepad2 className="h-12 w-12 text-green-600" />
-              <h1 className="text-4xl font-bold text-gray-900">SignChallenge</h1>
-            </div>
-            <p className="text-xl text-gray-600 mb-6">¡Pon a prueba tus habilidades en lenguaje de señas!</p>
-            <div className="flex justify-center gap-8 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <Trophy className="h-4 w-4 text-yellow-600" />
-                <span>Gana puntos</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-orange-600" />
-                <span>Construye rachas</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Star className="h-4 w-4 text-yellow-600" />
-                <span>Desbloquea niveles</span>
-              </div>
-            </div>
+            )}
           </div>
+        </>
+      )}
 
-          {/* Level Selection */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {GAME_LEVELS.map((level) => (
-              <Card
-                key={level.id}
-                className={`relative cursor-pointer transition-all hover:scale-105 ${
-                  level.unlocked
-                    ? level.completed
-                      ? "bg-green-50 border-green-200 hover:bg-green-100"
-                      : "bg-white border-gray-200 hover:shadow-lg"
-                    : "bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed"
-                }`}
-                onClick={() => level.unlocked && startGame(level)}
+      {/* PANTALLA DE JUEGO */}
+      {(gameMode.gameState === 'playing' || gameMode.gameState === 'paused') && gameMode.currentLevel && (
+        <div className="space-y-6">
+          {/* Header del juego */}
+          <div className="flex items-center justify-between bg-white rounded-lg shadow-sm p-4">
+            <div className="flex items-center space-x-4">
+              <Badge variant="outline" className="text-lg px-3 py-1">
+                {gameMode.currentLevel.name}
+              </Badge>
+              <div className="flex items-center space-x-2 text-red-500">
+                <Heart size={20} />
+                <span className="font-bold">{gameMode.gameProgress.lives}</span>
+              </div>
+              <div className="flex items-center space-x-2 text-blue-500">
+                <Zap size={20} />
+                <span className="font-bold">{gameMode.gameProgress.score}</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              {gameMode.gameState === 'playing' ? (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleGameAction('pause')}
+                >
+                  <Pause size={16} />
+                  Pausar
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleGameAction('resume')}
+                >
+                  <Play size={16} />
+                  Reanudar
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => handleGameAction('quit')}
               >
-                <CardHeader className="text-center">
-                  <div className="relative mx-auto mb-4">
-                    <div
-                      className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold ${
-                        level.unlocked ? level.bgColor : "bg-gray-400"
-                      }`}
-                    >
-                      {level.unlocked ? level.id : <Lock className="h-8 w-8" />}
-                    </div>
-                    {level.completed && (
-                      <CheckCircle className="absolute -top-1 -right-1 h-6 w-6 text-green-500 bg-white rounded-full" />
-                    )}
-                  </div>
-                  <CardTitle className={level.unlocked ? level.color : "text-gray-500"}>{level.name}</CardTitle>
-                  <CardDescription>{level.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Tiempo:</span>
-                      <span className="font-medium">{level.timeLimit}s</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Vidas:</span>
-                      <div className="flex gap-1">
-                        {Array.from({ length: level.lives }).map((_, i) => (
-                          <Heart key={i} className="h-3 w-3 fill-red-500 text-red-500" />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Multiplicador:</span>
-                      <span className="font-medium">x{level.pointsMultiplier}</span>
-                    </div>
-                    {level.unlocked && (
-                      <div className="flex justify-center gap-1 pt-2">
-                        {[1, 2, 3].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-4 w-4 ${
-                              star <= level.stars ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {level.unlocked && (
-                    <Button className="w-full mt-4" variant={level.completed ? "outline" : "default"}>
-                      <Play className="h-4 w-4 mr-2" />
-                      {level.completed ? "Jugar de Nuevo" : "Comenzar"}
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                <Home size={16} />
+                Salir
+              </Button>
+            </div>
           </div>
 
-          {/* Game Instructions */}
-          <Card className="mt-12">
-            <CardHeader>
-              <CardTitle>¿Cómo Jugar?</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <span className="text-xl font-bold text-blue-600">1</span>
-                  </div>
-                  <h3 className="font-semibold mb-2">Selecciona un Nivel</h3>
-                  <p className="text-sm text-gray-600">
-                    Elige tu nivel de dificultad. Los niveles se desbloquean progresivamente.
-                  </p>
+          {/* Layout principal - 2 columnas */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Panel izquierdo - Información */}
+            <div className="space-y-6">
+              {/* Palabra objetivo */}
+              <div className="text-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-8 shadow-sm">
+                <h2 className="text-sm text-gray-600 mb-2">Forma la palabra:</h2>
+                <div className="text-4xl md:text-6xl font-bold text-blue-600 tracking-wider">
+                  {gameMode.currentWord}
                 </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <span className="text-xl font-bold text-purple-600">2</span>
-                  </div>
-                  <h3 className="font-semibold mb-2">Deletrea Palabras</h3>
-                  <p className="text-sm text-gray-600">
-                    Usa lenguaje de señas para deletrear las palabras que aparecen en pantalla.
-                  </p>
+                <div className="mt-4 text-gray-500">
+                  Palabra {gameMode.gameProgress.currentWordIndex + 1} de {gameMode.currentWords.length}
                 </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <span className="text-xl font-bold text-green-600">3</span>
+                
+                {/* Indicador visual del progreso */}
+                {gameMode.currentWord && (
+                  <div className="mt-4 flex justify-center">
+                    <div className="flex space-x-1">
+                      {Array.from(gameMode.currentWord).map((targetLetter, index) => {
+                        const userLetter = wordBuffer[index];
+                        const isCorrect = userLetter && userLetter.toUpperCase() === targetLetter.toUpperCase();
+                        const isEmpty = !userLetter;
+                        
+                        return (
+                          <div
+                            key={index}
+                            className={`
+                              w-8 h-8 border-2 rounded flex items-center justify-center text-sm font-bold
+                              ${isEmpty 
+                                ? 'border-gray-300 bg-gray-50 text-gray-400' 
+                                : isCorrect 
+                                  ? 'border-green-500 bg-green-100 text-green-700'
+                                  : 'border-red-500 bg-red-100 text-red-700'
+                              }
+                            `}
+                          >
+                            {userLetter || targetLetter}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <h3 className="font-semibold mb-2">Gana Puntos</h3>
-                  <p className="text-sm text-gray-600">
-                    Completa palabras rápidamente para ganar más puntos y construir rachas.
-                  </p>
+                )}
+              </div>
+
+              {/* Buffer de palabra actual */}
+              <div className="text-center bg-white rounded-xl p-6 shadow-sm">
+                <h3 className="text-sm text-gray-600 mb-2">Tu palabra:</h3>
+                <div className="text-2xl font-bold text-green-600 tracking-wider min-h-[40px]">
+                  {wordBuffer || '...'}
+                </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  {gameMode.currentWord ? (
+                    <>
+                      {wordBuffer.length}/{gameMode.currentWord.length} letras
+                    </>
+                  ) : (
+                    'Empieza a deletrear'
+                  )}
+                </div>
+                
+                {/* Predicción actual y controles */}
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-600 mb-2">Predicción actual:</div>
+                  <div className="text-xl font-bold text-blue-600 mb-3">
+                    {currentPrediction} <span className="text-sm text-gray-500">({(confidence * 100).toFixed(0)}%)</span>
+                  </div>
+                  
+                  {/* Botón para agregar predicción al buffer */}
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={addCurrentPredictionToBuffer}
+                    disabled={!currentPrediction || currentPrediction === '?' || confidence < 0.7 || wordBuffer.length >= (gameMode.currentWord?.length || 0)}
+                    className="mr-2"
+                  >
+                    ➕ Agregar "{currentPrediction}"
+                  </Button>
+                </div>
+                
+                {/* Controles manuales del buffer */}
+                <div className="mt-4 flex justify-center space-x-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={sendCurrentBuffer}
+                    disabled={wordBuffer.length === 0}
+                  >
+                    📤 Enviar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={clearWordBuffer}
+                    disabled={wordBuffer.length === 0}
+                  >
+                    🗑️ Limpiar
+                  </Button>
+                </div>
+                
+                {/* Indicador de intervalo inteligente */}
+                <div className="mt-3 text-center">
+                  <div className="text-xs text-gray-500">
+                    📏 Intervalo de captura: <span className="font-mono">{frameIntervalMs.current}ms</span>
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {wordBuffer.length > 0 ? '🔄 Activo' : '😴 Idle'}
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+
+              {/* Progreso del nivel (CORREGIDO) */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Progreso del nivel</span>
+                  <span>{gameMode.gameProgress.correctWords?.length || 0}/{gameMode.currentWords.length}</span>
+                </div>
+                <Progress 
+                  value={gameMode.currentWords.length > 0 ? ((gameMode.gameProgress.correctWords?.length || 0) / gameMode.currentWords.length) * 100 : 0}
+                  className="h-3"
+                />
+              </div>
+
+              {/* Predicción actual */}
+              <TranslationResult 
+                result={null}
+                isProcessing={isCameraActive}
+                currentPrediction={currentPrediction}
+                confidence={confidence}
+              />
+            </div>
+
+            {/* Panel derecho - Cámara */}
+            <div className="bg-white rounded-lg shadow-sm p-6 relative">
+              <h3 className="text-lg font-semibold mb-4">📹 Cámara</h3>
+              
+              <CameraView 
+                ref={cameraRef}
+                isActive={isCameraActive}
+                className="aspect-video w-full max-w-sm mx-auto"
+              />
+              
+              {/* Controles de cámara */}
+              <div className="mt-4 flex justify-center">
+                <Button 
+                  onClick={() => {
+                    if (isCameraActive) {
+                      setIsCameraActive(false)
+                      stopRealtimeTranslation()
+                    } else {
+                      setIsCameraActive(true)
+                      startRealtimeTranslation()
+                    }
+                  }}
+                  variant={isCameraActive ? "outline" : "default"}
+                  size="sm"
+                >
+                  {isCameraActive ? 'Pausar Cámara' : 'Activar Cámara'}
+                </Button>
+              </div>
+
+              {/* Overlay de pausa */}
+              {gameMode.gameState === 'paused' && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
+                  <div className="text-white text-center">
+                    <Pause size={48} className="mx-auto mb-4" />
+                    <h3 className="text-2xl font-bold">Juego Pausado</h3>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </main>
-      </div>
+      )}
+
+      {/* PANTALLA DE GAME OVER */}
+      {gameMode.gameState === 'game-over' && (
+        <div className="text-center space-y-6">
+          <div className="bg-red-50 rounded-xl p-8">
+            <XCircle size={64} className="text-red-500 mx-auto mb-4" />
+            <h2 className="text-3xl font-bold text-red-600 mb-2">¡Game Over!</h2>
+            <p className="text-gray-600">Te quedaste sin vidas</p>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h3 className="text-xl font-bold mb-4">Resultado Final</h3>
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-yellow-500">{gameMode.gameProgress.score}</div>
+                <div className="text-sm text-gray-600">Puntos</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-500">{gameMode.gameProgress.correctWords?.length || 0}</div>
+                <div className="text-sm text-gray-600">Palabras Correctas</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-center space-x-4">
+            <Button onClick={() => gameMode.currentLevel && gameMode.startGame(gameMode.currentLevel.id)}>
+              <RotateCcw size={16} className="mr-2" />
+              Intentar de Nuevo
+            </Button>
+            <Button variant="outline" onClick={handleBackToMenu}>
+              <Home size={16} className="mr-2" />
+              Volver al Menú
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* PANTALLA DE COMPLETADO */}
+      {gameMode.gameState === 'completed' && (
+        <div className="text-center space-y-6">
+          <div className="bg-green-50 rounded-xl p-8">
+            <CheckCircle size={64} className="text-green-500 mx-auto mb-4" />
+            <h2 className="text-3xl font-bold text-green-600 mb-2">¡Nivel Completado!</h2>
+            <p className="text-gray-600">¡Excelente trabajo!</p>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h3 className="text-xl font-bold mb-4">Resultado Final</h3>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-yellow-500">{gameMode.gameProgress.score}</div>
+                <div className="text-sm text-gray-600">Puntos</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-500">{gameMode.gameProgress.correctWords?.length || 0}</div>
+                <div className="text-sm text-gray-600">Correctas</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-blue-500">{gameMode.gameProgress.streak}</div>
+                <div className="text-sm text-gray-600">Mejor Racha</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-center space-x-4">
+            <Button onClick={handleBackToMenu}>
+              <Home size={16} className="mr-2" />
+              Volver al Menú
+            </Button>
+          </div>
+        </div>
+      )}
     </AppLayout>
   )
 }

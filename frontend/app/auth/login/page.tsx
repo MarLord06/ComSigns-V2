@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth-context'
+import ErrorBoundary from '@/components/shared/error-boundary'
 import { 
   Hand, 
   Eye, 
@@ -15,7 +16,7 @@ import {
   ArrowLeft
 } from 'lucide-react'
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -26,6 +27,18 @@ export default function LoginPage() {
 
   const { signIn, user, loading: authLoading } = useAuth()
   const router = useRouter()
+
+  // Mostrar loading mientras se inicializa la auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    )
+  }
 
   // Redirigir si ya está autenticado
   useEffect(() => {
@@ -236,5 +249,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <ErrorBoundary>
+      <LoginPageContent />
+    </ErrorBoundary>
   )
 }

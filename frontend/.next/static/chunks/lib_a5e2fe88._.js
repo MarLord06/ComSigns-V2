@@ -67,28 +67,43 @@ const AuthProvider = ({ children })=>{
     const [isNewUser, setIsNewUser] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "AuthProvider.useEffect": ()=>{
+            console.log('Initializing auth...');
             // Obtener sesión inicial
-            __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].auth.getSession().then({
-                "AuthProvider.useEffect": ({ data: { session } })=>{
+            const getSession = {
+                "AuthProvider.useEffect.getSession": async ()=>{
+                    const { data: { session }, error } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].auth.getSession();
+                    if (error) {
+                        console.error('Error getting session:', error);
+                        setLoading(false);
+                        return;
+                    }
+                    console.log('Initial session:', session ? 'Found' : 'Not found');
                     setSession(session);
                     setUser(session?.user ?? null);
                     if (session?.user) {
-                        loadUserProfile(session.user.id);
-                        loadUserStats(session.user.id);
+                        console.log('User found, loading profile and stats...');
+                        await loadUserProfile(session.user.id);
+                        await loadUserStats(session.user.id);
                     }
                     setLoading(false);
+                    console.log('Auth initialization complete');
                 }
-            }["AuthProvider.useEffect"]);
+            }["AuthProvider.useEffect.getSession"];
+            getSession();
             // Escuchar cambios de autenticación
             const { data: { subscription } } = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].auth.onAuthStateChange({
                 "AuthProvider.useEffect": async (event, session)=>{
+                    console.log('Auth state changed:', event);
                     setSession(session);
                     setUser(session?.user ?? null);
                     if (session?.user) {
-                        await loadUserProfile(session.user.id);
-                        await loadUserStats(session.user.id);
+                        console.log('Loading user data...');
+                        loadUserProfile(session.user.id) // Quitar await para evitar bloqueos
+                        ;
+                        loadUserStats(session.user.id) // Quitar await para evitar bloqueos
+                        ;
                         // Verificar si es un usuario nuevo
-                        if (event === 'SIGNED_IN' && !profile) {
+                        if (event === 'SIGNED_IN') {
                             setIsNewUser(true);
                         }
                     } else {
@@ -100,53 +115,91 @@ const AuthProvider = ({ children })=>{
                 }
             }["AuthProvider.useEffect"]);
             return ({
-                "AuthProvider.useEffect": ()=>subscription.unsubscribe()
+                "AuthProvider.useEffect": ()=>{
+                    subscription.unsubscribe();
+                }
             })["AuthProvider.useEffect"];
         }
-    }["AuthProvider.useEffect"], []);
+    }["AuthProvider.useEffect"], []) // Dependencias vacías para ejecutar solo una vez
+    ;
     const loadUserProfile = async (userId)=>{
         try {
-            const { data, error } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('profiles').select('*').eq('id', userId).single();
-            if (error && error.code !== 'PGRST116') {
+            console.log('Loading profile for user:', userId);
+            const { data, error } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('user_profiles').select('*').eq('id', userId).maybeSingle();
+            if (error) {
                 console.error('Error loading profile:', error);
+                // Si hay error grave, limpiar sesión
+                if (error.code === '42P01' || error.message.includes('does not exist')) {
+                    console.log('Forcing logout due to profile error');
+                    await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].auth.signOut();
+                }
                 return;
             }
+            if (!data) {
+                console.log('No profile found for user, user might have been deleted');
+                // Usuario eliminado, limpiar sesión
+                await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].auth.signOut();
+                return;
+            }
+            console.log('Profile data:', data);
             setProfile(data);
         } catch (error) {
             console.error('Error loading profile:', error);
+            // En caso de error, limpiar sesión para evitar loops
+            await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].auth.signOut();
         }
     };
     const loadUserStats = async (userId)=>{
         try {
-            // Crear una sesión de usuario si no existe
-            let sessionId = userId; // Por ahora usar userId como sessionId
-            // Obtener estadísticas directamente de Supabase
-            const { data: statsData, error } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('practice_results').select('score, accuracy, total_time_seconds').eq('session_id', sessionId);
+            console.log('Loading stats for user:', userId);
+            // Obtener estadísticas de game_attempts (nueva estructura simplificada)
+            const { data: attemptsData, error } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('game_attempts').select('points_earned, is_correct, time_taken_seconds').eq('user_id', userId);
             if (error) {
                 console.log('No stats yet, using defaults:', error);
+                // Establecer stats por defecto
+                setStats({
+                    total_sessions: 0,
+                    total_practice_time: 0,
+                    letters_completed: [],
+                    average_accuracy: 0,
+                    current_streak: 0,
+                    best_streak: 0,
+                    total_points: 0,
+                    level: 1
+                });
+                return;
             }
+            console.log('Attempts data:', attemptsData);
             // Calcular estadísticas o usar datos mock
-            const stats = statsData && statsData.length > 0 ? {
-                total_sessions: statsData.length,
-                total_practice_time: statsData.reduce((sum, result)=>sum + result.total_time_seconds, 0),
-                letters_completed: [],
-                average_accuracy: statsData.reduce((sum, result)=>sum + result.accuracy, 0) / statsData.length,
-                current_streak: 0,
-                best_streak: 0,
-                total_points: statsData.reduce((sum, result)=>sum + result.score, 0),
-                level: Math.floor(statsData.reduce((sum, result)=>sum + result.score, 0) / 100) + 1
-            } : {
-                total_sessions: 0,
-                total_practice_time: 0,
-                letters_completed: [],
-                average_accuracy: 0,
-                current_streak: 0,
-                best_streak: 0,
-                total_points: 0,
-                level: 1
-            };
-            setStats(stats);
-            console.log('Stats loaded successfully:', stats);
+            if (attemptsData && attemptsData.length > 0) {
+                const correctAttempts = attemptsData.filter((a)=>a.is_correct);
+                const stats = {
+                    total_sessions: attemptsData.length,
+                    total_practice_time: attemptsData.reduce((sum, result)=>sum + (result.time_taken_seconds || 0), 0),
+                    letters_completed: [],
+                    average_accuracy: correctAttempts.length / attemptsData.length,
+                    current_streak: 0,
+                    best_streak: 0,
+                    total_points: attemptsData.reduce((sum, result)=>sum + (result.points_earned || 0), 0),
+                    level: Math.floor(attemptsData.reduce((sum, result)=>sum + (result.points_earned || 0), 0) / 100) + 1
+                };
+                setStats(stats);
+                console.log('Stats loaded successfully:', stats);
+            } else {
+                // Usuario nuevo sin estadísticas
+                const defaultStats = {
+                    total_sessions: 0,
+                    total_practice_time: 0,
+                    letters_completed: [],
+                    average_accuracy: 0,
+                    current_streak: 0,
+                    best_streak: 0,
+                    total_points: 0,
+                    level: 1
+                };
+                setStats(defaultStats);
+                console.log('Using default stats for new user');
+            }
         } catch (error) {
             console.error('Error loading stats:', error);
             // Datos por defecto para usuarios nuevos
@@ -230,8 +283,8 @@ const AuthProvider = ({ children })=>{
                     error: new Error('No user data returned')
                 };
             }
-            // Crear perfil en la tabla profiles
-            const { error: profileError } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('profiles').insert({
+            // Crear perfil en la tabla user_profiles
+            const { error: profileError } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('user_profiles').insert({
                 id: data.user.id,
                 username,
                 full_name: fullName,
@@ -272,7 +325,7 @@ const AuthProvider = ({ children })=>{
             error: new Error('No user logged in')
         };
         try {
-            const { error } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('profiles').update(updates).eq('id', user.id);
+            const { error } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('user_profiles').update(updates).eq('id', user.id);
             if (!error) {
                 setProfile((prev)=>prev ? {
                         ...prev,
@@ -311,7 +364,7 @@ const AuthProvider = ({ children })=>{
         children: children
     }, void 0, false, {
         fileName: "[project]/lib/auth-context.tsx",
-        lineNumber: 288,
+        lineNumber: 347,
         columnNumber: 10
     }, this);
 };
