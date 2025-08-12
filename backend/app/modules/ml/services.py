@@ -68,7 +68,7 @@ class MLService:
             # En desarrollo, permitir que la API funcione sin modelo
             if settings.is_development:
                 print(f"⚠️  Modelo no disponible en desarrollo: {str(e)}")
-                print("💡 Sugerencia: Verifica que model_trained_v2_fixed.h5 y best_model.h5 estén en /app/models/")
+                print("💡 Sugerencia: Verifica que model.h5 esté en /app/models/ podrias cambiar el nombre del modelo a model.h5 y arreglar para que cargue bien")
                 self.model = None
             else:
                 raise ModelError(f"Error cargando modelo: {str(e)}")
@@ -224,7 +224,8 @@ class TutorialService:
             return {"error": "Paso inválido"}
         
         # Importar el servicio de Supabase aquí para evitar importación circular
-        from app.core.supabase import supabase_service
+        from app.core.simple_supabase import get_simple_supabase_service
+        supabase_service = get_simple_supabase_service()
         
         # Intentar obtener la lección desde Supabase
         lesson = await supabase_service.get_tutorial_lesson_by_number(step)
@@ -262,7 +263,8 @@ class TutorialService:
         Obtener resumen del tutorial desde Supabase o fallback
         """
         # Importar el servicio de Supabase aquí para evitar importación circular
-        from app.core.supabase import supabase_service
+        from app.core.simple_supabase import get_simple_supabase_service
+        supabase_service = get_simple_supabase_service()
         
         # Intentar obtener lecciones desde Supabase
         lessons = await supabase_service.get_tutorial_lessons()

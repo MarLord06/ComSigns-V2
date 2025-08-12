@@ -9,7 +9,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, WebSocket
 from fastapi import WebSocketDisconnect  # añadido para manejar desconexiones
 
-from app.core.supabase import supabase_service
+from app.core.simple_supabase import get_simple_supabase_service
 from app.core.config import settings
 from app.modules.ml.services import ml_service, tutorial_service, practice_service
 from app.modules.ml.schemas import (
@@ -21,6 +21,11 @@ from app.modules.ml.schemas import (
 )
 
 router = APIRouter()
+
+# Función para obtener el servicio Supabase
+def get_supabase_service():
+    """Obtener servicio Supabase"""
+    return get_simple_supabase_service()
 
 def get_or_create_session_id(request: Request) -> str:
     """
@@ -67,6 +72,7 @@ async def predict_letter(websocket: WebSocket):
     session_id = get_or_create_session_id_ws(websocket)
 
     # Crear sesión de usuario (si procede)
+    supabase_service = get_supabase_service()
     if supabase_service.is_connected():
         await supabase_service.create_user_session({
             "session_id": session_id,
@@ -154,15 +160,19 @@ async def predict_letter(websocket: WebSocket):
 
             if landmarks is None:
                 # Guardar intento fallido
+                supabase_service = get_supabase_service()
                 if supabase_service.is_connected():
-                    await supabase_service.save_prediction({
-                        "session_id": session_id,
-                        "predicted_letter": "",
-                        "confidence": 0.0,
-                        "processing_time_ms": 0.0,
-                        "landmarks_data": [],
-                        "status": "no_hand_detected"
-                    })
+                    await supabase_service.save_ml_prediction(
+                        session_id=session_id,
+                        user_id="dev-user-001",  # Usuario por defecto para desarrollo
+                        prediction_data={
+                            "predicted_letter": "",
+                            "status": "no_hand_detected",
+                            "processing_time_ms": 0.0,
+                            "landmarks_data": []
+                        },
+                        confidence=0.0
+                    )
 
                 await websocket.send_json({
                     "type": "prediction",
@@ -178,16 +188,20 @@ async def predict_letter(websocket: WebSocket):
             # Predicción
             result = ml_service.predict_letter(landmarks)
 
-            # Persistir
+            # Persistir predicción exitosa
+            supabase_service = get_supabase_service()
             if supabase_service.is_connected():
-                await supabase_service.save_prediction({
-                    "session_id": session_id,
-                    "predicted_letter": result["letter"],
-                    "confidence": result["confidence"],
-                    "processing_time_ms": result["processing_time_ms"],
-                    "landmarks_data": landmarks.tolist(),
-                    "status": result["status"]
-                })
+                await supabase_service.save_ml_prediction(
+                    session_id=session_id,
+                    user_id="dev-user-001",  # Usuario por defecto para desarrollo
+                    prediction_data={
+                        "predicted_letter": result["letter"],
+                        "status": result["status"],
+                        "processing_time_ms": result["processing_time_ms"],
+                        "landmarks_data": landmarks.tolist()
+                    },
+                    confidence=result["confidence"]
+                )
 
             await websocket.send_json({
                 "type": "prediction",
@@ -296,6 +310,7 @@ async def update_tutorial_progress(request: TutorialProgressRequest, http_reques
         session_id = get_or_create_session_id(http_request)
         
         # Guardar progreso en Supabase
+        supabase_service = get_supabase_service()
         if supabase_service.is_connected():
             # Determinar la letra basada en el step
             letters = ["A","B","C","D","E","F","G","H","I","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y"]
@@ -339,6 +354,7 @@ async def create_practice_session(request: PracticeSessionRequest, http_request:
         
         # Guardar sesión en Supabase
         practice_session_id = None
+        supabase_service = get_supabase_service()
         if supabase_service.is_connected():
             practice_session_id = await supabase_service.save_practice_session({
                 "session_id": session_id,
@@ -369,6 +385,7 @@ async def submit_practice_result(request: PracticeResultRequest, http_request: R
         results = practice_service.calculate_score(request.predictions, request.target_letters)
         
         # Guardar resultados en Supabase
+        supabase_service = get_supabase_service()
         if supabase_service.is_connected():
             await supabase_service.save_practice_result({
                 "session_id": session_id,
@@ -394,6 +411,7 @@ async def get_practice_leaderboard(difficulty: str = "beginner", limit: int = 10
     """
     try:
         # Obtener datos reales de Supabase
+        supabase_service = get_supabase_service()
         if supabase_service.is_connected():
             leaderboard_data = await supabase_service.get_leaderboard(difficulty, limit)
             
@@ -430,6 +448,7 @@ async def get_prediction_stats(http_request: Request):
         session_id = get_or_create_session_id(http_request)
         
         # Obtener estadísticas reales de Supabase
+        supabase_service = get_supabase_service()
         if supabase_service.is_connected():
             stats = await supabase_service.get_user_statistics(session_id)
             
@@ -465,6 +484,7 @@ async def ml_health_check():
     """
     try:
         model_info = ml_service.get_model_info()
+        supabase_service = get_supabase_service()
         supabase_status = supabase_service.is_connected()
         
         return {
@@ -493,6 +513,7 @@ async def supabase_status_check():
     Verificar estado específico de Supabase
     """
     try:
+        supabase_service = get_supabase_service()
         is_connected = supabase_service.is_connected()
         
         if is_connected:

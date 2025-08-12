@@ -5,8 +5,8 @@ Router principal de la API v1
 from fastapi import APIRouter
 
 from app.modules.ml.routes import router as ml_router
-from app.modules.tutorial.routes import router as tutorial_router
-from app.modules.practice.routes import router as practice_router
+# from app.modules.tutorial.routes import router as tutorial_router  # TEMPORALMENTE DESHABILITADO
+from app.modules.gamification.routes import router as gamification_router
 
 api_router = APIRouter()
 
@@ -17,16 +17,16 @@ api_router.include_router(
     tags=["Machine Learning"]
 )
 
-api_router.include_router(
-    tutorial_router,
-    prefix="/tutorial",
-    tags=["Tutorial"]
-)
+# api_router.include_router(
+#     tutorial_router,
+#     prefix="/tutorial",
+#     tags=["Tutorial"]
+# )
 
 api_router.include_router(
-    practice_router,
-    prefix="/practice",
-    tags=["Practice"]
+    gamification_router,
+    prefix="/gamification", 
+    tags=["Gamification"]
 )
 
 # Endpoints generales de la API
@@ -41,7 +41,7 @@ async def api_root():
         "modules": [
             "ml - Machine Learning y predicciones",
             "tutorial - Tutorial interactivo", 
-            "practice - Modo práctica con gamificación"
+            "gamification - Sistema de gamificación (challenges, niveles, puntuaciones)"
         ],
         "documentation": "/docs"
     }

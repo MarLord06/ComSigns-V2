@@ -73,11 +73,15 @@ export default function GamePage() {
   const [isTranslating, setIsTranslating] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const isTranslatingRef = useRef(false) // REF PARA EVITAR CLOSURE STALE
-  const frameIntervalMs = useRef<number>(4000) // 4 segundos inicial (modo idle)
+  const frameIntervalMs = useRef<number>(1000) // 1 segundo fijo - más simple y confiable
   const lastFrameTime = useRef<number>(0)
   
   // Estado para el sistema inteligente de intervalos
   const [smartInterval, setSmartInterval] = useState(false)
+  
+  // Timeout de inactividad
+  const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const INACTIVITY_TIMEOUT = 45000 // 45 segundos sin interacción = perder vida
   
   // Hook para conexión realtime
   const { 
@@ -109,13 +113,19 @@ export default function GamePage() {
     
     if (predictedWord === targetWord) {
       console.log('[WORD_CHECK] ✅ ¡Palabra correcta!');
+      // Registrar intento correcto
+      gameMode.recordAttempt(targetWord, predictedWord, true);
       gameMode.processCorrectAnswer(targetWord);
       clearWordBuffer(); // Limpiar buffer al acertar
+      // resetInactivityTimer(); // Lo manejaremos en useEffect
     } else if (predictedWord.length === targetWord.length) {
       console.log('[WORD_CHECK] ❌ Palabra incorrecta (longitud completa)');
       // Palabra completa pero incorrecta - perder una vida y limpiar buffer
-      // Por ahora solo limpiamos el buffer, el sistema de vidas se maneja en el useEffect
-      clearWordBuffer(); // Limpiar buffer para nuevo intento
+      // Registrar intento incorrecto
+      gameMode.recordAttempt(targetWord, predictedWord, false);
+      gameMode.processWrongAnswer(predictedWord);
+      clearWordBuffer(); // Limpiar buffer para nuevo intento  
+      // resetInactivityTimer(); // Lo manejaremos en useEffect
     } else {
       console.log('[WORD_CHECK] ⏳ Palabra incompleta, continuando...');
       // Palabra incompleta, no hacer nada (continuar recolectando letras)
@@ -129,96 +139,59 @@ export default function GamePage() {
     }
   }, []);
   
-  // Función para ajustar dinámicamente la frecuencia de captura
-  const adjustFrameInterval = useCallback((reason: 'idle' | 'waiting' | 'active') => {
-    let newInterval: number;
-    
-    switch (reason) {
-      case 'active':
-        // Cuando hay actividad (nueva letra detectada), capturar más frecuentemente
-        newInterval = 1000; // 1 segundo
-        break;
-      case 'waiting':
-        // Cuando esperamos confirmación de letra, frecuencia media
-        newInterval = 2000; // 2 segundos
-        break;
-      case 'idle':
-      default:
-        // Estado idle o normal, frecuencia más baja
-        newInterval = 4000; // 4 segundos
-        break;
-    }
-    
-    if (frameIntervalMs.current !== newInterval) {
-      frameIntervalMs.current = newInterval;
-      console.log('[FRAME_INTERVAL] 📏 Ajustando intervalo de captura a:', newInterval, 'ms, razón:', reason);
-      
-      // Reiniciar el intervalo con la nueva frecuencia si está activo
-      if (intervalRef.current && isTranslatingRef.current) {
-        clearInterval(intervalRef.current);
-        // Nota: startFrameCapture se define después, se llamará cuando sea necesario
-      }
-    }
-  }, []);
-  
   const clearWordBuffer = useCallback(() => {
     console.log('[BUFFER] 🗑️  Limpiando buffer completo');
     setWordBuffer('');
     clearBufferTimeout();
+  }, [clearBufferTimeout]);
+  
+  // Funciones para manejar timeout de inactividad
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+    }
     
-    // Volver al modo idle después de limpiar
-    adjustFrameInterval('idle');
-  }, [clearBufferTimeout, adjustFrameInterval]);
+    // Solo establecer timer si el juego está activo
+    if (gameMode.gameState === 'playing') {
+      inactivityTimeoutRef.current = setTimeout(() => {
+        console.log('[INACTIVITY] ⏰ Timeout por inactividad - perdiendo vida');
+        // Registrar intento incorrecto por inactividad
+        if (gameMode.currentWord) {
+          gameMode.recordAttempt(gameMode.currentWord, '', false); // Palabra vacía por inactividad
+        }
+        gameMode.processWrongAnswer(); // Sin palabra específica
+        clearWordBuffer(); // Limpiar buffer
+        resetInactivityTimer(); // Reiniciar timer para próxima palabra
+      }, INACTIVITY_TIMEOUT);
+      
+      console.log('[INACTIVITY] 🔄 Timer de inactividad reiniciado -', INACTIVITY_TIMEOUT / 1000, 'segundos');
+    }
+  }, [gameMode, clearWordBuffer]);
+  
+  const clearInactivityTimer = useCallback(() => {
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+      inactivityTimeoutRef.current = null;
+      console.log('[INACTIVITY] 🛑 Timer de inactividad detenido');
+    }
+  }, []);
   
   // Nueva función: Agregar predicción actual al buffer manualmente
-  const addCurrentPredictionToBuffer = useCallback(() => {
-    if (!currentPrediction || currentPrediction === '?' || confidence < 0.7) {
-      console.log('[BUFFER] ⚠️  No hay predicción válida para agregar:', currentPrediction, confidence);
-      return;
+  const addToBuffer = useCallback(() => {
+    if (currentPrediction && currentPrediction !== '?' && confidence >= 0.7) {
+      const newBuffer = wordBuffer + currentPrediction;
+      setWordBuffer(newBuffer);
+      console.log('[BUFFER] ✅ Letra agregada manualmente:', currentPrediction, 'Buffer:', newBuffer);
+      
+      // Reiniciar timer de inactividad al agregar letra
+      resetInactivityTimer();
+      
+      // Auto-comparar si el buffer alcanza la longitud objetivo  
+      if (gameMode.currentWord && newBuffer.length === gameMode.currentWord.length) {
+        setTimeout(() => checkWordMatch(newBuffer), 500);
+      }
     }
-    
-    if (!gameMode.currentWord) {
-      console.log('[BUFFER] ⚠️  No hay palabra objetivo');
-      return;
-    }
-    
-    const targetLength = gameMode.currentWord.length;
-    const currentBuffer = wordBufferRef.current;
-    
-    // Si el buffer ya está completo, no agregar más letras
-    if (currentBuffer.length >= targetLength) {
-      console.log('[BUFFER] ⚠️  Buffer completo, no se puede agregar más letras');
-      return;
-    }
-    
-    const newBuffer = currentBuffer + currentPrediction;
-    setWordBuffer(newBuffer);
-    wordBufferRef.current = newBuffer;
-    
-    console.log('[BUFFER] ✅ Letra agregada manualmente:', currentPrediction, 'Nuevo buffer:', newBuffer);
-    
-    // Ajustar intervalo para captura activa tras agregar letra
-    adjustFrameInterval('active');
-    
-    // Auto-comparar si el buffer alcanza la longitud objetivo
-    if (newBuffer.length === targetLength) {
-      console.log('[BUFFER] 🎯 Buffer completado, verificando palabra...');
-      setTimeout(() => checkWordMatch(newBuffer), 500);
-    } else {
-      // Configurar timeout para auto-completar si el usuario no continúa
-      clearBufferTimeout();
-      const timeout = setTimeout(() => {
-        console.log('[BUFFER] ⏱️  Timeout de inactividad, enviando palabra parcial:', newBuffer);
-        if (newBuffer.length > 0) {
-          checkWordMatch(newBuffer);
-        }
-        // Volver al modo idle después del timeout
-        adjustFrameInterval('idle');
-      }, 5000); // 5 segundos de inactividad
-      setBufferTimeout(timeout);
-      bufferTimeoutRef.current = timeout;
-    }
-  }, [currentPrediction, confidence, gameMode.currentWord, clearBufferTimeout, checkWordMatch, adjustFrameInterval]);
+  }, [currentPrediction, confidence, wordBuffer, gameMode.currentWord, checkWordMatch, resetInactivityTimer]);
   
   
   const sendCurrentBuffer = useCallback(() => {
@@ -306,11 +279,10 @@ export default function GamePage() {
       await connectRealtime();
       console.log('[TRANSLATION] ✅ Conexión realtime completada');
       
-      // Inicializar captura de frames con sistema inteligente
-      adjustFrameInterval('idle'); // Comenzar en modo idle
+      // Inicializar captura de frames con intervalo fijo
       startFrameCapture();
       
-      console.log('[TRANSLATION] ⏱️  Sistema de captura inteligente configurado');
+      console.log('[TRANSLATION] ⏱️  Sistema de captura configurado con intervalo fijo de', frameIntervalMs.current, 'ms');
       console.log('[TRANSLATION] 📊 Estado final - isTranslating:', isTranslating, 'ref:', isTranslatingRef.current, 'intervalRef:', !!intervalRef.current);
       console.log('[TRANSLATION] 🎉 Traducción realtime iniciada exitosamente');
       
@@ -320,7 +292,7 @@ export default function GamePage() {
       isTranslatingRef.current = false;
       setCameraError('Error al conectar con el servicio de traducción');
     }
-  }, [isTranslating, connectRealtime, sendFrame, clearWordBuffer, adjustFrameInterval, startFrameCapture]);
+  }, [isTranslating, connectRealtime, sendFrame, clearWordBuffer, startFrameCapture]);
   
   const stopRealtimeTranslation = useCallback(async () => {
     console.log('[TRANSLATION] 🛑 Deteniendo traducción realtime...', {
@@ -351,9 +323,6 @@ export default function GamePage() {
     setConfidence(0);
     clearWordBuffer(); // Limpiar sistema de buffer completo
     
-    // Volver al modo idle
-    adjustFrameInterval('idle');
-    
     // Desconectar del servicio realtime
     try {
       await disconnectRealtime();
@@ -361,7 +330,7 @@ export default function GamePage() {
     } catch (error) {
       console.error('[TRANSLATION] ❌ Error al desconectar:', error);
     }
-  }, [disconnectRealtime, clearWordBuffer, adjustFrameInterval]); // Añadir dependencias necesarias
+  }, [disconnectRealtime, clearWordBuffer]); // Simplificar dependencias
 
   // ========================================
   // EFECTOS
@@ -376,6 +345,22 @@ export default function GamePage() {
   useEffect(() => {
     gameMode.loadLevels()
   }, [])
+
+  // Manejar timer de inactividad (NUEVO)
+  useEffect(() => {
+    if (gameMode.gameState === 'playing' && gameMode.currentWord) {
+      console.log('[INACTIVITY] 🎯 Nueva palabra detectada, iniciando timer de inactividad');
+      resetInactivityTimer();
+    } else {
+      console.log('[INACTIVITY] 🛑 Juego no activo, limpiando timer');
+      clearInactivityTimer();
+    }
+    
+    // Cleanup al desmontar
+    return () => {
+      clearInactivityTimer();
+    };
+  }, [gameMode.gameState, gameMode.currentWord, resetInactivityTimer, clearInactivityTimer]);
 
   // Sincronizar ref con estado (NUEVO)
   useEffect(() => {
@@ -410,15 +395,9 @@ export default function GamePage() {
       console.log('[PREDICTION] 🤷 Predicción de baja confianza:', letter, conf);
     }
     
-    // Ajustar intervalo basado en actividad de predicción
-    if (gameMode.gameState === 'playing') {
-      if (conf >= 0.7 && letter && letter !== '?') {
-        adjustFrameInterval('active'); // Predicción válida = más frecuente
-      } else {
-        adjustFrameInterval('idle'); // Predicción inválida = menos frecuente
-      }
-    }
-  }, [realtimePrediction, gameMode.gameState, adjustFrameInterval]);
+    // El sistema de intervalo fijo no necesita ajustes dinámicos
+    // Mantiene una captura constante cada segundo
+  }, [realtimePrediction, gameMode.gameState]);
 
   // Finalizar juego cuando no quedan vidas
   useEffect(() => {
@@ -762,7 +741,7 @@ export default function GamePage() {
                   <Button
                     size="sm"
                     variant="default"
-                    onClick={addCurrentPredictionToBuffer}
+                    onClick={addToBuffer}
                     disabled={!currentPrediction || currentPrediction === '?' || confidence < 0.7 || wordBuffer.length >= (gameMode.currentWord?.length || 0)}
                     className="mr-2"
                   >

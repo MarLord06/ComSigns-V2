@@ -41,6 +41,7 @@ app.add_middleware(
 app.add_middleware(LoggingMiddleware)
 
 # Incluir routers
+# Incluir routers de la API
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Health check endpoint

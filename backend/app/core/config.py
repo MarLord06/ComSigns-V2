@@ -40,13 +40,23 @@ class Settings(BaseSettings):
         env="ALLOWED_ORIGINS"
     )
     
-    # Machine Learning
-    MODEL_PATH: str = Field(default="/app/models/model.h5", env="MODEL_PATH")
-    CONFIDENCE_THRESHOLD: float = Field(default=0.65, env="CONFIDENCE_THRESHOLD")
-
     # Logging
     LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
     LOG_FORMAT: str = Field(default="JSON", env="LOG_FORMAT")
+    
+    # ML Model Configuration
+    MODEL_PATH: str = Field(default="/app/models/model.h5", env="MODEL_PATH")
+    CONFIDENCE_THRESHOLD: float = Field(default=0.65, env="CONFIDENCE_THRESHOLD")
+    
+    # Development Settings
+    DEBUG: bool = Field(default=False, env="DEBUG")
+    
+    # Upload Configuration
+    MAX_UPLOAD_SIZE: int = Field(default=10485760, env="MAX_UPLOAD_SIZE")  # 10MB
+    UPLOAD_DIR: str = Field(default="/app/uploads", env="UPLOAD_DIR")
+    
+    # Session Configuration
+    SESSION_EXPIRE_MINUTES: int = Field(default=60, env="SESSION_EXPIRE_MINUTES")
 
     
     @property
@@ -70,3 +80,10 @@ class Settings(BaseSettings):
 
 # Instancia global de configuración
 settings = Settings()
+
+def get_settings() -> Settings:
+    """
+    Función para obtener la configuración global
+    Útil para inyección de dependencias
+    """
+    return settings

@@ -1,4 +1,4 @@
-(globalThis.TURBOPACK = globalThis.TURBOPACK || []).push(["static/chunks/_22b8e9e8._.js", {
+(globalThis.TURBOPACK = globalThis.TURBOPACK || []).push(["static/chunks/_d9cf53c4._.js", {
 
 "[project]/lib/utils.ts [app-client] (ecmascript)": ((__turbopack_context__) => {
 "use strict";
@@ -4701,6 +4701,26 @@ class GamificationService {
         this.baseUrl = `${API_BASE}/api/v1/gamification`;
         this.getAuthHeaders = getAuthHeaders || (()=>Promise.resolve({}));
     }
+    async getUserProfile() {
+        try {
+            const authHeaders = await this.getAuthHeaders();
+            const response = await fetch(`${this.baseUrl}/user/profile`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...authHeaders
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.profile;
+        } catch (error) {
+            console.error('Error getting user profile:', error);
+            throw error;
+        }
+    }
     // ========================================
     // 🎮 GAME LEVELS
     // ========================================
@@ -4710,6 +4730,15 @@ class GamificationService {
             const letters = await this.getAllLetters();
             if (letters.length === 0) {
                 throw new Error('No hay letras disponibles en el sistema');
+            }
+            // Obtener perfil del usuario para determinar niveles desbloqueados
+            let userCurrentLevel = 1; // Por defecto nivel 1
+            try {
+                const userProfile = await this.getUserProfile();
+                userCurrentLevel = userProfile.current_level || 1;
+                console.log('[LEVELS] User current level:', userCurrentLevel);
+            } catch (error) {
+                console.warn('[LEVELS] Could not get user profile, defaulting to level 1:', error);
             }
             // Palabras organizadas por dificultad
             const wordsByDifficulty = {
@@ -4761,8 +4790,8 @@ class GamificationService {
                     name: "Palabras Básicas",
                     description: "Palabras simples de 3-5 letras",
                     difficulty: 'easy',
-                    unlocked: true,
-                    completed: false,
+                    unlocked: userCurrentLevel >= 1,
+                    completed: userCurrentLevel > 1,
                     stars: 0,
                     words_length: [
                         3,
@@ -4778,8 +4807,8 @@ class GamificationService {
                     name: "Palabras Intermedias",
                     description: "Palabras de 6-8 letras",
                     difficulty: 'medium',
-                    unlocked: true,
-                    completed: false,
+                    unlocked: userCurrentLevel >= 2,
+                    completed: userCurrentLevel > 2,
                     stars: 0,
                     words_length: [
                         6,
@@ -4795,8 +4824,8 @@ class GamificationService {
                     name: "Palabras Avanzadas",
                     description: "Palabras largas y complejas",
                     difficulty: 'hard',
-                    unlocked: false,
-                    completed: false,
+                    unlocked: userCurrentLevel >= 3,
+                    completed: userCurrentLevel > 3,
                     stars: 0,
                     words_length: [
                         9,
@@ -4810,6 +4839,12 @@ class GamificationService {
             ];
             // Filtrar niveles que tengan al menos una palabra válida
             const validLevels = dynamicLevels.filter((level)=>level.words.length > 0);
+            console.log('[LEVELS] Generated levels:', validLevels.map((l)=>({
+                    id: l.id,
+                    name: l.name,
+                    unlocked: l.unlocked,
+                    completed: l.completed
+                })));
             return {
                 levels: validLevels,
                 total_levels: validLevels.length
@@ -4850,7 +4885,12 @@ class GamificationService {
     }
     async startGameSession(levelId, userId) {
         try {
+            console.log('[GAMIFICATION_SERVICE] Starting game session:', {
+                levelId,
+                userId
+            });
             const authHeaders = await this.getAuthHeaders();
+            console.log('[GAMIFICATION_SERVICE] Auth headers:', authHeaders);
             const response = await fetch(`${this.baseUrl}/game/start`, {
                 method: 'POST',
                 headers: {
@@ -4862,20 +4902,36 @@ class GamificationService {
                     user_id: userId // Enviar el UUID del usuario desde el contexto de auth
                 })
             });
+            console.log('[GAMIFICATION_SERVICE] Response status:', response.status);
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error('[GAMIFICATION_SERVICE] Response error:', errorText);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
+            console.log('[GAMIFICATION_SERVICE] Response data:', data);
+            // Verificar que el backend devolvió una sesión válida
+            if (!data.session) {
+                console.error('Backend did not return a session object:', data);
+                throw new Error('Backend did not return a valid session');
+            }
+            // El backend devuelve 'id' no 'session_id'
+            const sessionId = data.session.id || data.session.session_id;
+            if (!sessionId) {
+                console.error('Backend session has no ID:', data.session);
+                throw new Error('Backend did not return a valid session ID');
+            }
+            console.log('[GAMIFICATION_SERVICE] ✅ Session started successfully with ID:', sessionId);
             // Adaptar la respuesta del backend al formato esperado por el frontend
             return {
-                session_id: data.session?.session_id || `session_${Date.now()}`,
+                session_id: sessionId,
                 level_id: levelId,
                 user_id: userId,
-                started_at: data.session?.started_at || new Date().toISOString(),
+                started_at: data.session.started_at || new Date().toISOString(),
                 status: 'active',
                 current_word_index: 0,
                 score: 0,
-                lives_remaining: 5
+                lives_remaining: data.session.lives_remaining || 5
             };
         } catch (error) {
             console.error('Error starting game session:', error);
@@ -4884,7 +4940,13 @@ class GamificationService {
     }
     async endGameSession(sessionId, finalScore, completed = false) {
         try {
+            console.log('[GAMIFICATION_SERVICE] Ending game session:', {
+                sessionId,
+                finalScore,
+                completed
+            });
             const authHeaders = await this.getAuthHeaders();
+            console.log('[GAMIFICATION_SERVICE] Auth headers for end:', authHeaders);
             const response = await fetch(`${this.baseUrl}/game/end`, {
                 method: 'POST',
                 headers: {
@@ -4896,12 +4958,17 @@ class GamificationService {
                     final_score: finalScore
                 })
             });
+            console.log('[GAMIFICATION_SERVICE] End response status:', response.status);
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error('[GAMIFICATION_SERVICE] End response error:', errorText);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            return await response.json();
+            const result = await response.json();
+            console.log('[GAMIFICATION_SERVICE] Game ended successfully:', result);
+            return result;
         } catch (error) {
-            console.error('Error ending game session:', error);
+            console.error('[GAMIFICATION_SERVICE] Error ending game session:', error);
             throw error;
         }
     }
@@ -5109,6 +5176,40 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
     __turbopack_context__.k.registerExports(module, globalThis.$RefreshHelpers$);
 }
 }}),
+"[project]/lib/utils/auth-headers.ts [app-client] (ecmascript)": ((__turbopack_context__) => {
+"use strict";
+
+var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
+{
+/**
+ * Utilities para headers de autenticación
+ */ __turbopack_context__.s({
+    "getSupabaseAuthHeaders": (()=>getSupabaseAuthHeaders)
+});
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase.ts [app-client] (ecmascript)");
+;
+const getSupabaseAuthHeaders = async ()=>{
+    try {
+        const { data: { session }, error } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].auth.getSession();
+        if (error) {
+            console.error('Error getting session for auth headers:', error);
+            return {};
+        }
+        if (session?.access_token) {
+            return {
+                'Authorization': `Bearer ${session.access_token}`
+            };
+        }
+        return {};
+    } catch (error) {
+        console.error('Error creating auth headers:', error);
+        return {};
+    }
+};
+if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
+    __turbopack_context__.k.registerExports(module, globalThis.$RefreshHelpers$);
+}
+}}),
 "[project]/lib/hooks/use-game-mode.ts [app-client] (ecmascript)": ((__turbopack_context__) => {
 "use strict";
 
@@ -5122,7 +5223,9 @@ var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$services$2f$gamification$2e$service$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/services/gamification.service.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$auth$2d$context$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/auth-context.tsx [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$utils$2f$auth$2d$headers$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/utils/auth-headers.ts [app-client] (ecmascript)");
 var _s = __turbopack_context__.k.signature();
+;
 ;
 ;
 ;
@@ -5141,6 +5244,8 @@ function useGameMode() {
     // CONTEXT & STATE  
     // ========================================
     const { user } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$auth$2d$context$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"])();
+    // Crear instancia del servicio autenticado
+    const gamificationService = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$services$2f$gamification$2e$service$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["createAuthenticatedGamificationService"])(__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$utils$2f$auth$2d$headers$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getSupabaseAuthHeaders"]);
     const [gameState, setGameState] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('menu');
     const [currentLevel, setCurrentLevel] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [currentSession, setCurrentSession] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
@@ -5209,7 +5314,7 @@ function useGameMode() {
             setIsLoading(true);
             setError(null);
             try {
-                const data = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$services$2f$gamification$2e$service$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["gamificationService"].getGameLevels();
+                const data = await gamificationService.getGameLevels();
                 setLevels(data.levels);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Error loading levels');
@@ -5255,7 +5360,7 @@ function useGameMode() {
                 }
                 console.log('[GAME_MODE] Found level:', level);
                 // Start session in backend with user ID
-                const session = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$services$2f$gamification$2e$service$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["gamificationService"].startGameSession(levelId, user?.id);
+                const session = await gamificationService.startGameSession(levelId, user?.id);
                 // Initialize game state
                 setCurrentLevel(level);
                 setCurrentSession(session);
@@ -5387,7 +5492,7 @@ function useGameMode() {
             stopTimer();
             if (currentSession) {
                 try {
-                    await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$services$2f$gamification$2e$service$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["gamificationService"].endGameSession(currentSession.session_id, gameProgress.score, completed);
+                    await gamificationService.endGameSession(currentSession.session_id, gameProgress.score, completed);
                 } catch (err) {
                     console.error('Error ending game session:', err);
                 }
@@ -5413,6 +5518,39 @@ function useGameMode() {
         }
     }["useGameMode.useCallback[resetGame]"], [
         stopTimer
+    ]);
+    const recordAttempt = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useGameMode.useCallback[recordAttempt]": async (targetWord, predictedWord, isCorrect)=>{
+            if (!currentSession) {
+                console.warn('[GAME_MODE] No hay sesión activa para registrar intento');
+                return;
+            }
+            try {
+                // Para simplificar, vamos a usar el primer caracter como letter_id
+                // En una implementación completa, deberías mapear cada letra a su ID correspondiente
+                const letterId = targetWord.charCodeAt(0) - 65 + 1; // A=1, B=2, C=3, etc.
+                await gamificationService.recordAttempt({
+                    session_id: currentSession.session_id,
+                    target_letter: targetWord[0],
+                    predicted_letter: predictedWord[0] || '',
+                    is_correct: isCorrect,
+                    confidence: 0.8,
+                    time_taken: 1.0,
+                    word_index: gameProgress.currentWordIndex
+                });
+                console.log('[GAME_MODE] ✅ Intento registrado:', {
+                    targetWord,
+                    predictedWord,
+                    isCorrect
+                });
+            } catch (error) {
+                console.error('[GAME_MODE] Error registrando intento:', error);
+            }
+        }
+    }["useGameMode.useCallback[recordAttempt]"], [
+        currentSession,
+        gameProgress.currentWordIndex,
+        gamificationService
     ]);
     // ========================================
     // CLEANUP
@@ -5451,6 +5589,7 @@ function useGameMode() {
         nextWord,
         processCorrectAnswer,
         processWrongAnswer,
+        recordAttempt,
         endGame,
         resetGame,
         // Loading & Error States
@@ -5458,7 +5597,7 @@ function useGameMode() {
         error
     };
 }
-_s(useGameMode, "iFOnfJGao+Y9RMw3OUAJ+4xZ1oo=", false, function() {
+_s(useGameMode, "SKqwrhHqpMzUo2kld7ctlbQddDc=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$auth$2d$context$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"]
     ];
@@ -5777,4 +5916,4 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 }}),
 }]);
 
-//# sourceMappingURL=_22b8e9e8._.js.map
+//# sourceMappingURL=_d9cf53c4._.js.map
