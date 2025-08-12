@@ -246,6 +246,7 @@ $RECYCLE.BIN/
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
 
+
 # Node.js
 node_modules/
 npm-debug.log*
@@ -253,11 +254,7 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
-
-# Docker
-.dockerignore
-docker-compose.override.yml
-docker-compose.local.yml
+# Asegúrate de NO ignorar package.json ni package-lock.json
 
 # Machine Learning & AI
 *.hdf5
