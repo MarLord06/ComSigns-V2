@@ -26,7 +26,7 @@ app = FastAPI(
 # Middleware de seguridad
 app.add_middleware(
     TrustedHostMiddleware, 
-    allowed_hosts=["localhost", "127.0.0.1", "*.vercel.app"]
+    allowed_hosts=["localhost", "127.0.0.1", "*.vercel.app", "https://comsigns-v2.onrender.com"]
 )
 
 
