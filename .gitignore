@@ -271,7 +271,6 @@ docker-compose.local.yml
 *.tflite
 *.pb
 *.onnx
-models/
 checkpoints/
 logs/
 tensorboard_logs/
@@ -324,8 +323,6 @@ cache/
 .vscode/settings.json
 
 # Project specific
-backend/models/*.h5
-backend/models/*.pkl
 src/generacion_modelo/checkpoints/
 src/generacion_modelo/logs/
 modelo/
