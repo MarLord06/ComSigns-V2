@@ -41,34 +41,27 @@ class MLService:
         Cargar modelo de TensorFlow
         """
         try:
-            # 1. Intentar cargar el modelo entrenado v2 arreglado (máxima prioridad)
-            model_path_v2_fixed = "/app/models/model_trained_v2_fixed.h5"
-            if os.path.exists(model_path_v2_fixed):
-                self.model = load_model(model_path_v2_fixed)
-                print(f"✅ Modelo entrenado v2 arreglado cargado exitosamente desde: {model_path_v2_fixed}")
+            # 1. Intentar cargar model.h5 en /app/models/
+            model_path = "/app/models/model.h5"
+            if os.path.exists(model_path):
+                self.model = load_model(model_path)
+                print(f"✅ Modelo cargado exitosamente desde: {model_path}")
                 return
-            
+
             # 2. Intentar cargar el modelo desde la configuración
             config_model_path = settings.MODEL_PATH
             if os.path.exists(config_model_path):
                 self.model = load_model(config_model_path)
                 print(f"✅ Modelo desde configuración cargado exitosamente desde: {config_model_path}")
                 return
-            
-            # 3. Intentar cargar el mejor modelo como respaldo
-            best_model_path = "/app/models/best_model.h5"
-            if os.path.exists(best_model_path):
-                self.model = load_model(best_model_path)
-                print(f"✅ Mejor modelo cargado exitosamente desde: {best_model_path}")
-                return
-            
+
             raise ModelError("No se encontró ningún modelo disponible")
-            
+
         except Exception as e:
             # En desarrollo, permitir que la API funcione sin modelo
             if settings.is_development:
                 print(f"⚠️  Modelo no disponible en desarrollo: {str(e)}")
-                print("💡 Sugerencia: Verifica que model.h5 esté en /app/models/ podrias cambiar el nombre del modelo a model.h5 y arreglar para que cargue bien")
+                print("💡 Sugerencia: Verifica que model.h5 esté en /app/models/")
                 self.model = None
             else:
                 raise ModelError(f"Error cargando modelo: {str(e)}")
