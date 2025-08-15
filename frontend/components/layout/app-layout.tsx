@@ -14,7 +14,6 @@ import {
   X, 
   Home,
   Gamepad2,
-  Target,
   Play
 } from 'lucide-react';
 import Link from 'next/link';

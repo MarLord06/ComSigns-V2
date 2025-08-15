@@ -17,7 +17,6 @@ import {
   Menu,
   X,
   Play,
-  Target,
   Gamepad2,
   BarChart3,
 } from "lucide-react"
