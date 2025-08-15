@@ -47,9 +47,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Crear directorio para modelos
 RUN mkdir -p /models
+COPY models/model.h5 /models/model.h5
 
 # Copiar código de la aplicación al final
 COPY . .
+
 
 # Exponer puerto
 EXPOSE 8000

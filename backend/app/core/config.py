@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = Field(default="JSON", env="LOG_FORMAT")
     
     # ML Model Configuration
-    MODEL_PATH: str = Field(default="/app/models/model.h5", env="MODEL_PATH")
+    MODEL_PATH: str = Field(default="/models/model.h5", env="MODEL_PATH")
     CONFIDENCE_THRESHOLD: float = Field(default=0.65, env="CONFIDENCE_THRESHOLD")
     
     # Development Settings

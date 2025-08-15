@@ -47,6 +47,12 @@ class MLService:
                 self.model = load_model(model_path_v2_fixed)
                 print(f"✅ Modelo entrenado v2 arreglado cargado exitosamente desde: {model_path_v2_fixed}")
                 return
+
+            config_model_path = settings.MODEL_PATH
+            if os.path.exists(config_model_path):
+                self.model = load_model(config_model_path)
+                print(f"✅ Modelo desde configuración cargado exitosamente desde: {config_model_path}")
+                return
             
             raise ModelError("No se encontró ningún modelo disponible")
             
