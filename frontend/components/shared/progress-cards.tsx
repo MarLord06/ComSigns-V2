@@ -4,7 +4,6 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { 
@@ -138,27 +137,25 @@ export function GameLevelCard({
 
 // Componente para challenges/desafíos
 interface ChallengeCardProps {
-  id: string;
   title: string;
   description: string;
   target: number;
-  icon: any;
+  icon: React.ElementType;
   color: string;
   progress?: number;
   completed?: boolean;
   onStart?: () => void;
 }
 
-export function ChallengeCard({ 
-  id, 
-  title, 
-  description, 
-  target, 
-  icon: IconComponent, 
-  color, 
-  progress = 0, 
+export function ChallengeCard({
+  title,
+  description,
+  target,
+  icon: IconComponent,
+  color,
+  progress = 0,
   completed = false,
-  onStart 
+  onStart,
 }: ChallengeCardProps) {
   return (
     <Card className="transition-all hover:shadow-md">
@@ -207,7 +204,7 @@ interface StatsCardProps {
   title: string;
   value: string | number;
   description?: string;
-  icon?: any;
+  icon?: React.ElementType;
   color?: string;
 }
 

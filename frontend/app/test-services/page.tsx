@@ -42,7 +42,7 @@ export default function TestServicesPage() {
         camera.stopRealtimeTranslation();
         addResult('🔌 WebSocketService: Desconectado');
       }, 5000);
-    } catch (error) {
+    } catch {
       addResult('❌ WebSocketService: Error de conexión');
     }
   };
@@ -197,10 +197,10 @@ export default function TestServicesPage() {
         <div className="mt-8 bg-blue-50 border-l-4 border-blue-400 p-4">
           <h3 className="font-semibold text-blue-800 mb-2">📋 Instrucciones de Prueba</h3>
           <ol className="text-blue-700 text-sm space-y-1">
-            <li>1. Haz clic en "Probar CameraService" para inicializar la cámara</li>
+            <li>1. Haz clic en &quot;Probar CameraService&quot; para inicializar la cámara</li>
             <li>2. Permite el acceso a la cámara cuando se solicite</li>
-            <li>3. Prueba "Probar WebSocket" para verificar la conexión</li>
-            <li>4. Usa "Probar Captura Frame" para verificar que los frames se capturan</li>
+            <li>3. Prueba &quot;Probar WebSocket&quot; para verificar la conexión</li>
+            <li>4. Usa &quot;Probar Captura Frame&quot; para verificar que los frames se capturan</li>
             <li>5. Observa la consola del navegador para logs detallados</li>
           </ol>
         </div>

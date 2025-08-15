@@ -3,7 +3,7 @@
  * Mantiene la funcionalidad existente pero con mejor modularización
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { TranslationResponse } from '@/lib/services/translation.service';
 import { useRealtimePrediction } from './use-realtime-prediction';
 import { CONFIDENCE_THRESHOLDS } from '@/lib/types/realtime';
@@ -41,7 +41,7 @@ export interface CameraHookResult {
   initialize: () => Promise<boolean>;
   cleanup: () => void;
   captureFrame: () => Promise<File | null>;
-  startRealtimeTranslation: (cameraViewRef?: React.RefObject<any>) => void;
+  startRealtimeTranslation: (cameraViewRef?: React.RefObject<{ getVideoElement?: () => HTMLVideoElement }>) => void;
   stopRealtimeTranslation: () => void;
   
   // Nuevas funcionalidades
@@ -59,7 +59,7 @@ export interface CameraStats {
 
 export function useAdvancedCamera(options: AdvancedCameraOptions = {}): CameraHookResult {
   // Configuración con defaults
-  const config = {
+  const config = useMemo(() => ({
     debug: false,
     autoConnect: false,
     confidenceThreshold: CONFIDENCE_THRESHOLDS.ACCEPT,
@@ -70,7 +70,7 @@ export function useAdvancedCamera(options: AdvancedCameraOptions = {}): CameraHo
       facingMode: 'user' as const
     },
     ...options
-  };
+  }), [options]);
 
   // Estados base (igual que el hook original)
   const [isSupported, setIsSupported] = useState(false);
@@ -209,7 +209,7 @@ export function useAdvancedCamera(options: AdvancedCameraOptions = {}): CameraHo
             resolve();
           };
           
-          const onError = (e: Event) => {
+          const onError = () => {
             video.removeEventListener('loadedmetadata', onLoadedMetadata);
             video.removeEventListener('error', onError);
             reject(new Error('Video load error'));
@@ -232,13 +232,18 @@ export function useAdvancedCamera(options: AdvancedCameraOptions = {}): CameraHo
       log('INIT', 'Cámara inicializada correctamente');
       return true;
       
-    } catch (error: any) {
+    } catch (error) {
       setPermission('denied');
-      const errorMsg = error.name === 'NotAllowedError' 
-        ? 'Camera permission denied' 
-        : `Camera initialization failed: ${error.message}`;
+      let errorMsg = 'Camera initialization failed';
+      if (error instanceof Error) {
+        errorMsg = error.name === 'NotAllowedError'
+          ? 'Camera permission denied'
+          : `Camera initialization failed: ${error.message}`;
+        log('INIT_ERROR', errorMsg, error);
+      } else {
+        log('INIT_ERROR', errorMsg);
+      }
       setError(errorMsg);
-      log('INIT_ERROR', errorMsg, error);
       return false;
     } finally {
       setIsInitializing(false);
@@ -246,7 +251,7 @@ export function useAdvancedCamera(options: AdvancedCameraOptions = {}): CameraHo
   }, [isSupported, config.cameraConstraints, log]);
 
   // Función de captura de frame mejorada
-  const captureAndSendFrame = useCallback((cameraViewRef?: React.RefObject<any>, forceTranslating = false) => {
+  const captureAndSendFrame = useCallback((cameraViewRef?: React.RefObject<{ getVideoElement?: () => HTMLVideoElement }>, forceTranslating = false) => {
     const shouldTranslate = forceTranslating || isTranslating;
     
     if (!shouldTranslate) {
@@ -282,8 +287,8 @@ export function useAdvancedCamera(options: AdvancedCameraOptions = {}): CameraHo
           sendFrame(base64);
           log('FRAME', `Frame enviado desde videoRef (${base64.length} chars)`);
         }
-      } catch (e) {
-        log('FRAME_ERROR', 'Error capturando desde videoRef:', e);
+      } catch {
+        log('FRAME_ERROR', 'Error capturando desde videoRef');
         setStats(prev => ({ ...prev, droppedFrames: prev.droppedFrames + 1 }));
       }
       return;
@@ -291,34 +296,32 @@ export function useAdvancedCamera(options: AdvancedCameraOptions = {}): CameraHo
     
     // Usar cameraViewRef (comportamiento original)
     try {
-      const videoElement = cameraViewRef.current.getVideoElement?.() || videoRef.current;
+      const videoElement = cameraViewRef.current?.getVideoElement?.() || videoRef.current;
       if (!videoElement || videoElement.readyState < 2) {
         setStats(prev => ({ ...prev, droppedFrames: prev.droppedFrames + 1 }));
         return;
       }
-      
       if (!canvasRef.current) canvasRef.current = document.createElement('canvas');
       const canvas = canvasRef.current;
-        canvas.width = videoElement.videoWidth || config.cameraConstraints.width || 640;
-        canvas.height = videoElement.videoHeight || config.cameraConstraints.height || 480;      const ctx = canvas.getContext('2d');
+      canvas.width = videoElement.videoWidth || config.cameraConstraints.width || 640;
+      canvas.height = videoElement.videoHeight || config.cameraConstraints.height || 480;
+      const ctx = canvas.getContext('2d');
       if (!ctx) return;
-      
       ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
       const base64 = dataUrl.split(',')[1];
-      
       if (base64) {
         sendFrame(base64);
         log('FRAME', `Frame enviado desde cameraViewRef (${base64.length} chars)`);
       }
-    } catch (e) {
-      log('FRAME_ERROR', 'Error capturando frame:', e);
+    } catch {
+      log('FRAME_ERROR', 'Error capturando frame');
       setStats(prev => ({ ...prev, droppedFrames: prev.droppedFrames + 1 }));
     }
   }, [isTranslating, sendFrame, config.cameraConstraints, log]);
 
   // Funciones de traducción (igual que el original pero con mejoras)
-  const startRealtimeTranslation = useCallback((cameraViewRef?: React.RefObject<any>) => {
+  const startRealtimeTranslation = useCallback((cameraViewRef?: React.RefObject<{ getVideoElement?: () => HTMLVideoElement }>) => {
     if (isTranslating) return;
     
     log('RT_START', 'Iniciando traducción en tiempo real');
@@ -418,7 +421,7 @@ export function useAdvancedCamera(options: AdvancedCameraOptions = {}): CameraHo
   const updateOptions = useCallback((newOptions: Partial<AdvancedCameraOptions>) => {
     Object.assign(config, newOptions);
     log('CONFIG', 'Opciones actualizadas:', newOptions);
-  }, [config, log]);
+  }, [log, config]);
 
   // Cleanup en unmount
   useEffect(() => {

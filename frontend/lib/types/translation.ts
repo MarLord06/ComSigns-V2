@@ -11,6 +11,6 @@ export function mapHttpTranslationResponse(resp: TranslationResponse): Predictio
     confidence: resp.result.confidence ?? 0,
     processingTimeMs: resp.result.processing_time_ms ?? 0,
     hasLandmarks: (resp.result.signs_detected ?? 0) > 0,
-    raw: undefined as any // raw sólo para realtime; se podría ampliar si es necesario
+    raw: undefined // raw sólo para realtime; se podría ampliar si es necesario
   };
 }

@@ -13,7 +13,7 @@ import {
   CameraViewRef
 } from '@/components/translation';
 import { AppLayout, HeroSection } from '@/components/layout';
-import { useCamera, useTranslation, useBackendConnection } from '@/lib/hooks';
+import { useCamera, useBackendConnection } from '@/lib/hooks';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
@@ -44,13 +44,7 @@ export default function TranslatePage() {
   const hasError = cameraError || translationError;
   const errorMessage = cameraError || translationError || '';
 
-  // Función de captura que usa el ref del componente
-  const captureFrame = async () => {
-    if (cameraRef.current) {
-      return await cameraRef.current.captureFrame();
-    }
-    return null;
-  };
+
 
   // Handlers
   const handleToggleCamera = async () => {

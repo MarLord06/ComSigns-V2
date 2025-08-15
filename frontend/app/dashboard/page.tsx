@@ -55,7 +55,7 @@ export default function Dashboard() {
     subtitle, 
     color = 'blue' 
   }: {
-    icon: any
+    icon: React.ElementType
     title: string
     value: string | number
     subtitle?: string

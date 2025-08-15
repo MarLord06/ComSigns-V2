@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 7, "column": 0}, "map": {"version":3,"sources":["file:///Users/marloveper__/Documents/proyectos/ccc/ComSigns-DEV/ComSigns-V2/frontend/app/debug/page.tsx"],"sourcesContent":["'use client'\n\nexport default function DebugPage() {\n  return (\n    <div className=\"p-8\">\n      <h1 className=\"text-2xl font-bold mb-4\">Debug - Variables de Entorno</h1>\n      <div className=\"space-y-2\">\n        <p><strong>SUPABASE_URL:</strong> {process.env.NEXT_PUBLIC_SUPABASE_URL || 'No definida'}</p>\n        <p><strong>SUPABASE_ANON_KEY:</strong> {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Definida' : 'No definida'}</p>\n        <p><strong>API_URL:</strong> {process.env.NEXT_PUBLIC_API_URL || 'No definida'}</p>\n      </div>\n    </div>\n  )\n}\n"],"names":[],"mappings":";;;;AAAA;;AAEe,SAAS;IACtB,qBACE,8OAAC;QAAI,WAAU;;0BACb,8OAAC;gBAAG,WAAU;0BAA0B;;;;;;0BACxC,8OAAC;gBAAI,WAAU;;kCACb,8OAAC;;0CAAE,8OAAC;0CAAO;;;;;;4BAAsB;4BAAE,gFAAwC;;;;;;;kCAC3E,8OAAC;;0CAAE,8OAAC;0CAAO;;;;;;4BAA2B;4BAAE,uCAA4C;;;;;;;kCACpF,8OAAC;;0CAAE,8OAAC;0CAAO;;;;;;4BAAiB;4BAAE,sDAAmC;;;;;;;;;;;;;;;;;;;AAIzE","debugId":null}}]
-}

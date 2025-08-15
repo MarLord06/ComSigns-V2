@@ -58,7 +58,7 @@ export class GamificationService {
     this.getAuthHeaders = getAuthHeaders || (() => Promise.resolve({}));
   }
 
-  async getUserProfile(): Promise<any> {
+  async getUserProfile(): Promise<{ current_level?: number; [key: string]: unknown }> {
     try {
       const authHeaders = await this.getAuthHeaders();
       const response = await fetch(`${this.baseUrl}/user/profile`, {
@@ -379,7 +379,7 @@ export class GamificationService {
   // 🔤 LETTERS
   // ========================================
   
-  async getAllLetters(): Promise<any[]> {
+  async getAllLetters(): Promise<{ letter: string }[]> {
     try {
       const response = await fetch(`${this.baseUrl}/letters`);
       if (!response.ok) {
@@ -393,7 +393,7 @@ export class GamificationService {
     }
   }
 
-  async getRandomLetters(count: number = 5): Promise<any[]> {
+  async getRandomLetters(count: number = 5): Promise<{ letter: string }[]> {
     try {
       const response = await fetch(`${this.baseUrl}/letters/random/${count}`);
       if (!response.ok) {

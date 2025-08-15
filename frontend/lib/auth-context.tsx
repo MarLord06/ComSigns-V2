@@ -10,8 +10,8 @@ interface AuthContextType {
   profile: UserProfile | null
   stats: UserStats | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
-  signUp: (email: string, password: string, username: string, fullName: string, experienceLevel: string) => Promise<{ error: AuthError | null }>
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | Error | null }>
+  signUp: (email: string, password: string, username: string, fullName: string, experienceLevel: string) => Promise<{ error: AuthError | Error | null }>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: Error | null }>
   refreshStats: () => Promise<void>
@@ -206,37 +206,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<{ error: AuthError | null }> => {
     try {
       console.log('Attempting login for:', email)
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
-      
       if (error) {
         console.error('Login error:', error)
-        
-        // Manejar errores específicos
         if (error.message.includes('Email not confirmed')) {
           console.error('Email needs confirmation')
-          return { error: { ...error, message: 'Confirma tu email antes de iniciar sesión' } }
+          return { error: {
+            name: 'AuthError',
+            message: 'Confirma tu email antes de iniciar sesión',
+            status: 400,
+            code: 'email_not_confirmed',
+            __isAuthError: true
+          } as unknown as AuthError }
         }
-        
         if (error.message.includes('Invalid login credentials')) {
           console.error('Invalid credentials')
-          return { error: { ...error, message: 'Email o contraseña incorrectos' } }
+          return { error: {
+            name: 'AuthError',
+            message: 'Email o contraseña incorrectos',
+            status: 400,
+            code: 'invalid_login',
+            __isAuthError: true
+          } as unknown as AuthError }
         }
-        
         return { error }
       }
-      
       console.log('Login successful:', data.user?.email)
       return { error: null }
     } catch (err) {
       console.error('Unexpected login error:', err)
-      return { error: err as any }
+      return { error: {
+        name: 'AuthError',
+        message: err instanceof Error ? err.message : 'Unknown error',
+        status: 400,
+        code: 'unexpected',
+        __isAuthError: true
+      } as unknown as AuthError }
     }
   }
 
@@ -267,7 +278,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!data.user) {
         console.error('No user data returned')
-        return { error: new Error('No user data returned') as any }
+        return { error: {
+          name: 'AuthError',
+          message: 'No user data returned',
+          status: 400,
+          code: 'no_user',
+          __isAuthError: true
+        } as unknown as AuthError }
       }
 
       // Crear perfil en la tabla user_profiles
@@ -282,10 +299,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (profileError) {
         console.error('Error creating profile:', profileError)
-        // Si es un error de tabla no existe, dar un mensaje más claro
         if (profileError.code === '42P01') {
           console.error('La tabla profiles no existe. Ejecuta el schema de Supabase.')
-          return { error: new Error('Database not configured. Please contact support.') as any }
+          return { error: {
+            name: 'AuthError',
+            message: 'Database not configured. Please contact support.',
+            status: 500,
+            code: 'db_not_configured',
+            __isAuthError: true
+          } as unknown as AuthError }
         }
         return { error: profileError }
       }
@@ -294,7 +316,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error: null }
     } catch (err) {
       console.error('Unexpected signup error:', err)
-      return { error: err as any }
+      return { error: {
+        name: 'AuthError',
+        message: err instanceof Error ? err.message : 'Unknown error',
+        status: 400,
+        code: 'unexpected',
+        __isAuthError: true
+      } as unknown as AuthError }
     }
   }
 

@@ -27,7 +27,7 @@ export type PongMessage = {
   timestamp?: string | number;
 };
 
-export type UnknownMessage = { type: string; [k: string]: any };
+export type UnknownMessage = { type: string; [k: string]: unknown };
 
 export type IncomingRealtimeMessage =
   | SessionMessage

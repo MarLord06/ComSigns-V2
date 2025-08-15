@@ -1,28 +1,23 @@
+/**
+ * Página de práctica refactorizada usando componentes modulares
+ */
+
 "use client"
 
+import { useState } from "react"
+import { AppLayout, HeroSection } from '@/components/layout'
+import { LetterCard, ChallengeCard, StatsCard } from '@/components/shared'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { AppLayout } from "@/components/layout"
 import {
-  Hand,
-  X,
-  Play,
-  Target,
-  Gamepad2,
-  CheckCircle,
-  Lock,
-  Star,
   Trophy,
   Zap,
   BookOpen,
   Award,
   TrendingUp,
+  Target
 } from "lucide-react"
-import Link from "next/link"
-import Image from "next/image"
-import { useState, useRef, useCallback } from "react"
 
 // Datos de las letras del alfabeto
 const ALPHABET_LETTERS = [
@@ -61,8 +56,10 @@ interface Challenge {
   title: string
   description: string
   target: number
-  icon: any
+  icon: React.ElementType
   color: string
+  progress: number
+  completed: boolean
 }
 
 const CHALLENGES: Challenge[] = [
@@ -74,6 +71,8 @@ const CHALLENGES: Challenge[] = [
     target: 1,
     icon: BookOpen,
     color: "bg-blue-500",
+    progress: 1,
+    completed: true
   },
   {
     id: "practice",
@@ -83,475 +82,187 @@ const CHALLENGES: Challenge[] = [
     target: 5,
     icon: Target,
     color: "bg-purple-500",
+    progress: 3,
+    completed: false
   },
   {
     id: "speed",
     type: "speed",
     title: "Velocidad",
     description: "Haz la seña en menos de 2 segundos",
-    target: 2000,
+    target: 1,
     icon: Zap,
     color: "bg-yellow-500",
+    progress: 0,
+    completed: false
   },
   {
     id: "precision",
     type: "precision",
     title: "Precisión",
     description: "Mantén 90% de confianza",
-    target: 90,
+    target: 1,
     icon: Award,
-    color: "bg-green-500",
+    color: "bg-red-500",
+    progress: 0,
+    completed: false
   },
 ]
 
 export default function PracticePage() {
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null)
-  const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null)
-  const [isRecording, setIsRecording] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [confidence, setConfidence] = useState(0)
-  const [attempts, setAttempts] = useState(0)
-  const [timeElapsed, setTimeElapsed] = useState(0)
-  const [showSuccess, setShowSuccess] = useState(false)
+  const [currentChallenge, setCurrentChallenge] = useState<string | null>(null)
 
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Calcular estadísticas generales
-  const totalLetters = ALPHABET_LETTERS.length
-  const completedLetters = ALPHABET_LETTERS.filter((l) => l.completed).length
-  const totalStars = ALPHABET_LETTERS.reduce((sum, l) => sum + l.stars, 0)
-  const overallProgress = (completedLetters / totalLetters) * 100
-
-  // Iniciar desafío
-  const startChallenge = useCallback((letter: string, challenge: Challenge) => {
+  const handleLetterSelect = (letter: string) => {
     setSelectedLetter(letter)
-    setCurrentChallenge(challenge)
-    setProgress(0)
-    setAttempts(0)
-    setTimeElapsed(0)
-    setShowSuccess(false)
+    setCurrentChallenge(null)
+  }
 
-    if (challenge.type === "speed") {
-      const startTime = Date.now()
-      timerRef.current = setInterval(() => {
-        setTimeElapsed(Date.now() - startTime)
-      }, 100)
-    }
-  }, [])
+  const handleChallengeStart = (challengeId: string) => {
+    setCurrentChallenge(challengeId)
+  }
 
-  // Completar desafío
-  const completeChallenge = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-    }
-    setShowSuccess(true)
-    setIsRecording(false)
-
-    setTimeout(() => {
-      setCurrentChallenge(null)
-      setSelectedLetter(null)
-      setShowSuccess(false)
-    }, 2000)
-  }, [])
-
-  // Simular reconocimiento de seña
-  const simulateRecognition = useCallback(() => {
-    if (!currentChallenge) return
-
-    const newConfidence = Math.random() * 0.3 + 0.7 // 70-100%
-    setConfidence(newConfidence)
-    setAttempts((prev) => prev + 1)
-
-    switch (currentChallenge.type) {
-      case "learn":
-        setProgress(100)
-        setTimeout(completeChallenge, 1000)
-        break
-      case "practice":
-        const newProgress = Math.min(((attempts + 1) / currentChallenge.target) * 100, 100)
-        setProgress(newProgress)
-        if (attempts + 1 >= currentChallenge.target) {
-          setTimeout(completeChallenge, 500)
-        }
-        break
-      case "speed":
-        if (timeElapsed < currentChallenge.target) {
-          setProgress(100)
-          setTimeout(completeChallenge, 500)
-        }
-        break
-      case "precision":
-        if (newConfidence * 100 >= currentChallenge.target) {
-          setProgress(100)
-          setTimeout(completeChallenge, 500)
-        }
-        break
-    }
-  }, [currentChallenge, attempts, timeElapsed, completeChallenge])
-
-  if (currentChallenge && selectedLetter) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
-        {/* Challenge Header */}
-        <header className="px-4 lg:px-6 h-16 flex items-center border-b bg-white/95 backdrop-blur sticky top-0 z-50">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setCurrentChallenge(null)
-              setSelectedLetter(null)
-            }}
-            className="mr-4"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-full ${currentChallenge.color} flex items-center justify-center`}>
-              <currentChallenge.icon className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-gray-900">
-                Letra {selectedLetter} - {currentChallenge.title}
-              </h1>
-              <p className="text-sm text-gray-600">{currentChallenge.description}</p>
-            </div>
-          </div>
-          <div className="ml-auto">
-            <Badge variant="outline" className="font-mono">
-              {Math.round(progress)}%
-            </Badge>
-          </div>
-        </header>
-
-        <main className="flex-1 p-4 md:p-6">
-          <div className="max-w-4xl mx-auto">
-            {/* Progress Bar */}
-            <div className="mb-6">
-              <Progress value={progress} className="h-3" />
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Reference/Camera */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>{currentChallenge.type === "learn" ? "Referencia" : "Tu Práctica"}</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="relative bg-gray-900 aspect-video">
-                    {currentChallenge.type === "learn" ? (
-                      <div className="flex items-center justify-center h-full">
-                        <Image
-                          src={`/placeholder.svg?height=300&width=400&text=Seña+${selectedLetter}`}
-                          width={400}
-                          height={300}
-                          alt={`Seña de la letra ${selectedLetter}`}
-                          className="rounded-lg"
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                        {confidence > 0 && (
-                          <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-                            {Math.round(confidence * 100)}%
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  <div className="p-4 bg-gray-50 border-t">
-                    <div className="flex justify-center">
-                      {currentChallenge.type === "learn" ? (
-                        <Button onClick={simulateRecognition} className="bg-blue-600 hover:bg-blue-700">
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Entendido
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={() => {
-                            setIsRecording(!isRecording)
-                            if (!isRecording) {
-                              setTimeout(simulateRecognition, 1000)
-                            }
-                          }}
-                          className={isRecording ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
-                        >
-                          {isRecording ? (
-                            <>
-                              <X className="h-4 w-4 mr-2" />
-                              Detener
-                            </>
-                          ) : (
-                            <>
-                              <Play className="h-4 w-4 mr-2" />
-                              Practicar
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Stats & Instructions */}
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Estadísticas</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Intentos</span>
-                      <Badge variant="outline">{attempts}</Badge>
-                    </div>
-                    {currentChallenge.type === "speed" && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Tiempo</span>
-                        <Badge variant="outline">{(timeElapsed / 1000).toFixed(2)}s</Badge>
-                      </div>
-                    )}
-                    {confidence > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Confianza</span>
-                        <Badge variant="outline">{(confidence * 100).toFixed(2)}%</Badge>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Progreso</span>
-                      <Badge variant="outline">{Math.round(progress)}%</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Instrucciones</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm text-gray-600">
-                      {currentChallenge.type === "learn" && (
-                        <>
-                          <p>• Observa cuidadosamente la seña de referencia</p>
-                          <p>• Nota la posición de los dedos y la mano</p>
-                          <p>• Haz clic en "Entendido" cuando estés listo</p>
-                        </>
-                      )}
-                      {currentChallenge.type === "practice" && (
-                        <>
-                          <p>• Realiza la seña {currentChallenge.target} veces</p>
-                          <p>• Mantén la seña por 2-3 segundos</p>
-                          <p>• Asegúrate de que sea reconocida correctamente</p>
-                        </>
-                      )}
-                      {currentChallenge.type === "speed" && (
-                        <>
-                          <p>• Haz la seña lo más rápido posible</p>
-                          <p>• Objetivo: menos de {currentChallenge.target / 1000} segundos</p>
-                          <p>• Mantén la precisión mientras vas rápido</p>
-                        </>
-                      )}
-                      {currentChallenge.type === "precision" && (
-                        <>
-                          <p>• Enfócate en la forma perfecta de la seña</p>
-                          <p>• Objetivo: {currentChallenge.target}% de confianza</p>
-                          <p>• Tómate tu tiempo para hacerlo bien</p>
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* Success Modal */}
-            {showSuccess && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                <Card className="w-96 mx-4">
-                  <CardContent className="p-8 text-center">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Trophy className="h-8 w-8 text-green-600" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">¡Desafío Completado!</h3>
-                    <p className="text-gray-600 mb-4">
-                      Has completado el desafío "{currentChallenge.title}" para la letra {selectedLetter}
-                    </p>
-                    <div className="flex justify-center gap-1">
-                      {[1, 2, 3].map((star) => (
-                        <Star key={star} className="h-6 w-6 fill-yellow-400 text-yellow-400" />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </div>
-        </main>
-      </div>
-    )
+  const stats = {
+    totalLetters: ALPHABET_LETTERS.filter(l => l.completed).length,
+    totalStars: ALPHABET_LETTERS.reduce((sum, l) => sum + l.stars, 0),
+    completionRate: Number(((ALPHABET_LETTERS.filter(l => l.completed).length / ALPHABET_LETTERS.length) * 100).toFixed(2)),
+    streak: 5
   }
 
   return (
     <AppLayout currentPage="practice">
-      <div className="bg-gradient-to-br from-purple-50 via-white to-blue-50 min-h-screen">
-        <main className="p-4 md:p-6" id="main-content" role="main">
-          <div className="max-w-7xl mx-auto">
-            {/* Page Header */}
-            <div className="mb-8">
-              <div className="flex items-center gap-3 mb-4">
-                <Target className="h-8 w-8 text-purple-600" />
-                <h1 className="text-3xl font-bold text-gray-900">Zona de Entrenamiento</h1>
-                <Badge className="bg-purple-100 text-purple-800 flex items-center gap-1 ml-auto">
-                  <Trophy className="h-3 w-3" />
-                  {totalStars} estrellas
-                </Badge>
-              </div>
-              <p className="text-gray-600 mb-6">
-              Aprende el alfabeto en lenguaje de señas paso a paso. Completa desafíos para desbloquear nuevas letras.
-            </p>
-
-            {/* Overall Progress */}
-            <Card className="mb-8">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Progreso General</h3>
-                    <p className="text-sm text-gray-600">
-                      {completedLetters} de {totalLetters} letras completadas
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-purple-600">{Math.round(overallProgress)}%</div>
-                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      {totalStars} estrellas
-                    </div>
-                  </div>
-                </div>
-                <Progress value={overallProgress} className="h-3" />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Alphabet Grid */}
-          <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-4 mb-8">
-            {ALPHABET_LETTERS.map((letterData, index) => (
-              <Card
-                key={letterData.letter}
-                className={`relative cursor-pointer transition-all hover:scale-105 ${
-                  letterData.unlocked
-                    ? letterData.completed
-                      ? "bg-green-50 border-green-200 hover:bg-green-100"
-                      : "bg-blue-50 border-blue-200 hover:bg-blue-100"
-                    : "bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed"
-                }`}
-                onClick={() => letterData.unlocked && setSelectedLetter(letterData.letter)}
-              >
-                <CardContent className="p-4 text-center">
-                  <div className="relative">
-                    <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-2 ${
-                        letterData.completed
-                          ? "bg-green-500 text-white"
-                          : letterData.unlocked
-                            ? "bg-blue-500 text-white"
-                            : "bg-gray-300 text-gray-500"
-                      }`}
-                    >
-                      {letterData.unlocked ? letterData.letter : <Lock className="h-5 w-5" />}
-                    </div>
-                    {letterData.completed && (
-                      <CheckCircle className="absolute -top-1 -right-1 h-6 w-6 text-green-500 bg-white rounded-full" />
-                    )}
-                  </div>
-                  {letterData.unlocked && (
-                    <div className="flex justify-center gap-1">
-                      {[1, 2, 3].map((star) => (
-                        <Star
-                          key={star}
-                          className={`h-3 w-3 ${
-                            star <= letterData.stars ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Letter Details */}
-          {selectedLetter && (
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-purple-500 text-white rounded-full flex items-center justify-center text-xl font-bold">
-                    {selectedLetter}
-                  </div>
-                  <div>
-                    <h2 className="text-2xl">Letra {selectedLetter}</h2>
-                    <p className="text-gray-600">Completa todos los desafíos para dominar esta letra</p>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  {CHALLENGES.map((challenge) => (
-                    <Card
-                      key={challenge.id}
-                      className="cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => startChallenge(selectedLetter, challenge)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className={`w-10 h-10 rounded-full ${challenge.color} flex items-center justify-center`}>
-                            <challenge.icon className="h-5 w-5 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">{challenge.title}</h3>
-                            <p className="text-sm text-gray-600">{challenge.description}</p>
-                          </div>
-                        </div>
-                        <Button size="sm" variant="outline" className="w-full bg-transparent">
-                          <Play className="h-4 w-4 mr-2" />
-                          Comenzar
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Quick Stats */}
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card>
-              <CardContent className="p-6 text-center">
-                <TrendingUp className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-gray-900">{completedLetters}</div>
-                <div className="text-sm text-gray-600">Letras Completadas</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Star className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-gray-900">{totalStars}</div>
-                <div className="text-sm text-gray-600">Estrellas Ganadas</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Trophy className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-gray-900">{Math.round(overallProgress)}%</div>
-                <div className="text-sm text-gray-600">Progreso Total</div>
-              </CardContent>
-            </Card>
-          </div>
+      {/* Hero Section */}
+      <HeroSection
+        title="Práctica de Lenguaje de Señas"
+        subtitle="Aprende y perfecciona cada letra del alfabeto"
+      >
+        <div className="flex justify-center gap-4 flex-wrap">
+          <Badge variant="secondary" className="text-sm">
+            <Trophy className="h-4 w-4 mr-1" />
+            {stats.totalLetters}/25 Letras
+          </Badge>
+          <Badge variant="secondary" className="text-sm">
+            <Award className="h-4 w-4 mr-1" />
+            {stats.totalStars} Estrellas
+          </Badge>
+          <Badge variant="secondary" className="text-sm">
+            <TrendingUp className="h-4 w-4 mr-1" />
+            {stats.completionRate}% Completado
+          </Badge>
         </div>
-      </main>
+      </HeroSection>
+
+      {/* Contenido principal */}
+      <div className="py-8 px-4">
+        <div className="max-w-7xl mx-auto">
+          {/* Estadísticas generales */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <StatsCard
+              title="Letras Completadas"
+              value={`${stats.totalLetters}/25`}
+              icon={Trophy}
+              color="bg-green-500"
+            />
+            <StatsCard
+              title="Estrellas"
+              value={stats.totalStars}
+              icon={Award}
+              color="bg-yellow-500"
+            />
+            <StatsCard
+              title="Progreso"
+              value={`${stats.completionRate}%`}
+              icon={TrendingUp}
+              color="bg-blue-500"
+            />
+            <StatsCard
+              title="Racha"
+              value={`${stats.streak} días`}
+              icon={Zap}
+              color="bg-purple-500"
+            />
+          </div>
+
+          {!selectedLetter ? (
+            /* Vista de selección de letras */
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                Selecciona una letra para practicar
+              </h2>
+              
+              <div className="grid grid-cols-5 md:grid-cols-8 lg:grid-cols-10 gap-4">
+                {ALPHABET_LETTERS.map((letter) => (
+                  <LetterCard
+                    key={letter.letter}
+                    letter={letter.letter}
+                    unlocked={letter.unlocked}
+                    completed={letter.completed}
+                    stars={letter.stars}
+                    onSelect={() => handleLetterSelect(letter.letter)}
+                  />
+                ))}
+              </div>
+
+              {/* Progreso general */}
+              <div className="mt-8 bg-white rounded-lg p-6 shadow-sm border">
+                <h3 className="text-lg font-semibold mb-4">Progreso General</h3>
+                <Progress value={stats.completionRate} className="mb-2" />
+                <p className="text-sm text-gray-600">
+                  Has completado {stats.totalLetters} de 25 letras ({stats.completionRate}%)
+                </p>
+              </div>
+            </div>
+          ) : (
+            /* Vista de práctica de letra específica */
+            <div>
+              <div className="flex items-center gap-4 mb-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedLetter(null)}
+                >
+                  ← Volver
+                </Button>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Practicando letra &quot;{selectedLetter}&quot;
+                </h2>
+              </div>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {CHALLENGES.map((challenge) => (
+                  <ChallengeCard
+                    key={challenge.id}
+                    title={challenge.title}
+                    description={challenge.description}
+                    target={challenge.target}
+                    icon={challenge.icon}
+                    color={challenge.color}
+                    progress={challenge.progress}
+                    completed={challenge.completed}
+                    onStart={() => handleChallengeStart(challenge.id)}
+                  />
+                ))}
+              </div>
+
+              {currentChallenge && (
+                <div className="mt-8 bg-blue-50 rounded-lg p-6 border border-blue-200">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                    Desafío en progreso
+                  </h3>
+                  <p className="text-blue-700">
+                    Ejecutando: {CHALLENGES.find(c => c.id === currentChallenge)?.title}
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => setCurrentChallenge(null)}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </AppLayout>
   )

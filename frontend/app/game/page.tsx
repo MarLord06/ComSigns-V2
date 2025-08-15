@@ -10,31 +10,12 @@ import { GameLevelCard, StatsCard } from '@/components/shared'
 import { useGameMode } from '@/lib/hooks'
 import { useAuth } from '@/lib/auth-context'
 import { GameLevel } from '@/lib/services/gamification.service'
-import { 
-  TranslationLayout,
-  CameraView,
-  TranslationResult,
-  ControlPanel,
-  CameraViewRef
-} from '@/components/translation'
-import { useBackendConnection } from '@/lib/hooks'
+import { CameraView, TranslationResult, CameraViewRef } from '@/components/translation'
 import { useRealtimePrediction } from '@/lib/hooks/use-realtime-prediction'
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import {
-  Trophy,
-  Zap,
-  Heart,
-  Clock,
-  RotateCcw,
-  CheckCircle,
-  XCircle,
-  Star,
-  Play,
-  Pause,
-  Home
-} from "lucide-react"
+import { Trophy, Zap, Heart, RotateCcw, CheckCircle, XCircle, Star, Play, Pause, Home } from "lucide-react"
 
 // Tipos de estadísticas del juego
 interface GameStats {
@@ -47,13 +28,13 @@ interface GameStats {
 
 export default function GamePage() {
   // Hook de autenticación para acceder al perfil del usuario
-  const { user, profile, stats: userStats } = useAuth();
+  const { profile } = useAuth();
   
   // Hook principal del juego (conectado al backend)
   const gameMode = useGameMode()
   
   // Estados de la aplicación
-  const [selectedLevel, setSelectedLevel] = useState<GameLevel | null>(null)
+  // const [selectedLevel, setSelectedLevel] = useState<GameLevel | null>(null) // Eliminado porque no se usa
   const [isCameraActive, setIsCameraActive] = useState(false)
   
   // Referencias
@@ -77,26 +58,19 @@ export default function GamePage() {
   const lastFrameTime = useRef<number>(0)
   
   // Estado para el sistema inteligente de intervalos
-  const [smartInterval, setSmartInterval] = useState(false)
+  // const [smartInterval, setSmartInterval] = useState(false) // Eliminar si no se usa
   
   // Timeout de inactividad
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const INACTIVITY_TIMEOUT = 45000 // 45 segundos sin interacción = perder vida
   
   // Hook para conexión realtime
-  const { 
-    status: realtimeStatus, 
-    lastPrediction: realtimePrediction, 
-    error: realtimeError, 
-    connect: connectRealtime, 
-    disconnect: disconnectRealtime, 
-    sendFrame 
-  } = useRealtimePrediction({ autoConnect: false, log: true })
+  const { lastPrediction: realtimePrediction, connect: connectRealtime, disconnect: disconnectRealtime, sendFrame } = useRealtimePrediction({ autoConnect: false, log: true })
   
-  const { isConnected } = useBackendConnection()
+  // const { isConnected } = useBackendConnection() // Eliminar si no se usa
   
   // Estado local para cámara
-  const [cameraError, setCameraError] = useState('');
+  // const [cameraError, setCameraError] = useState(''); // Eliminar si no se usa
 
   // ========================================
   // SISTEMA DE BUFFER PARA PALABRAS (MEJORADO)
@@ -105,9 +79,10 @@ export default function GamePage() {
   const checkWordMatch = useCallback((word: string) => {
     if (!gameMode.currentWord) return;
     
-    const targetWord = gameMode.currentWord.toUpperCase();
-    const predictedWord = word.toUpperCase();
-    
+  const targetWord = gameMode.currentWord.toUpperCase();
+  const predictedWord = word.toUpperCase();
+  console.log('[WORD_CHECK] 🔍 Comparando:', predictedWord, 'vs', targetWord);
+  
     console.log('[WORD_CHECK] 🔍 Comparando:', predictedWord, 'vs', targetWord);
     console.log('[WORD_CHECK] 📊 Longitudes:', predictedWord.length, 'vs', targetWord.length);
     
@@ -242,7 +217,7 @@ export default function GamePage() {
     }, frameIntervalMs.current);
     
     console.log('[FRAME_CAPTURE] ⏱️  Intervalo de captura iniciado con', frameIntervalMs.current, 'ms');
-  }, [sendFrame]);
+  }, []); // sendFrame no es necesario como dependencia porque es estable
   
   const startRealtimeTranslation = useCallback(async () => {
     console.log('[TRANSLATION] 🚀 startRealtimeTranslation llamado, isTranslating:', isTranslating, 'ref:', isTranslatingRef.current);
@@ -258,7 +233,6 @@ export default function GamePage() {
       console.log('[TRANSLATION] 🎛️  Estableciendo isTranslating = true');
       setIsTranslating(true);
       isTranslatingRef.current = true; // ACTUALIZAR REF TAMBIÉN
-      setCameraError('');
       
       // Limpiar estado
       setWordBuffer('');
@@ -282,7 +256,6 @@ export default function GamePage() {
       console.error('[TRANSLATION] ❌ Error al iniciar traducción:', error);
       setIsTranslating(false);
       isTranslatingRef.current = false;
-      setCameraError('Error al conectar con el servicio de traducción');
     }
   }, [isTranslating, connectRealtime, sendFrame, clearWordBuffer, startFrameCapture]);
   
@@ -322,7 +295,7 @@ export default function GamePage() {
     } catch (error) {
       console.error('[TRANSLATION] ❌ Error al desconectar:', error);
     }
-  }, [disconnectRealtime, clearWordBuffer]); // Simplificar dependencias
+  }, [disconnectRealtime, clearWordBuffer, bufferTimeout, isTranslating]);
 
   // ========================================
   // EFECTOS
@@ -336,7 +309,7 @@ export default function GamePage() {
   // Cargar niveles al montar el componente
   useEffect(() => {
     gameMode.loadLevels()
-  }, [])
+  }, [gameMode])
 
   // Manejar timer de inactividad (NUEVO)
   useEffect(() => {
@@ -347,8 +320,6 @@ export default function GamePage() {
       console.log('[INACTIVITY] 🛑 Juego no activo, limpiando timer');
       clearInactivityTimer();
     }
-    
-    // Cleanup al desmontar
     return () => {
       clearInactivityTimer();
     };
@@ -371,12 +342,9 @@ export default function GamePage() {
   // Procesar predicciones en tiempo real (SIMPLIFICADO - SOLO MOSTRAR)
   useEffect(() => {
     if (!realtimePrediction) return
-    
     const letter = realtimePrediction.letter || ''
     const conf = realtimePrediction.confidence || 0
-    
     console.log('[PREDICTION] 📡 Letra recibida:', letter, 'Confianza:', conf);
-    
     if (conf >= 0.7 && letter && letter !== '?') {
       setCurrentPrediction(letter)
       setConfidence(conf)
@@ -386,10 +354,7 @@ export default function GamePage() {
       setConfidence(conf)
       console.log('[PREDICTION] 🤷 Predicción de baja confianza:', letter, conf);
     }
-    
-    // El sistema de intervalo fijo no necesita ajustes dinámicos
-    // Mantiene una captura constante cada segundo
-  }, [realtimePrediction, gameMode.gameState]);
+  }, [realtimePrediction])
 
   // Finalizar juego cuando no quedan vidas
   useEffect(() => {
@@ -434,7 +399,7 @@ export default function GamePage() {
     console.log('[GAME] 🎯 Level selected:', level)
     console.log('[GAME] Before startGame - gameState:', gameMode.gameState, 'currentLevel:', gameMode.currentLevel)
     
-    setSelectedLevel(level)
+  // setSelectedLevel(level) // Eliminado: no se usa
     await gameMode.startGame(level.id)
     
     console.log('[GAME] After startGame - gameState:', gameMode.gameState, 'currentLevel:', gameMode.currentLevel)
@@ -448,7 +413,7 @@ export default function GamePage() {
     gameMode.resetGame()
     setIsCameraActive(false)
     stopRealtimeTranslation()
-    setSelectedLevel(null)
+  // setSelectedLevel(null) // Eliminado: no se usa
     clearWordBuffer()
   }, [gameMode, stopRealtimeTranslation, clearWordBuffer])
 
@@ -494,7 +459,7 @@ export default function GamePage() {
     gamesPlayed: profile?.games_played || 0,
     accuracy: Number((profile?.accuracy_percentage || 0).toFixed(2)),
     bestStreak: profile?.longest_streak || 0,
-    levelsCompleted: gameMode.levels.filter((l: any) => l.completed).length
+  levelsCompleted: gameMode.levels.filter((l: { completed: boolean }) => l.completed).length
   }
 
   // ========================================
@@ -505,10 +470,10 @@ export default function GamePage() {
     <AppLayout currentPage="game">
       {/* Debug info */}
       <div className="mb-4 p-2 bg-yellow-100 rounded text-xs">
-        Debug: gameState="{gameMode.gameState}" currentLevel={gameMode.currentLevel ? gameMode.currentLevel.name : 'null'} levels={gameMode.levels.length}
-        <br />
-        Buffer: "{wordBuffer}" ({wordBuffer.length}/{gameMode.currentWord?.length || 0}) 
-        | Predicción actual: "{currentPrediction}" ({(confidence * 100).toFixed(2)}%)
+  Debug: gameState=&quot;{gameMode.gameState}&quot; currentLevel={gameMode.currentLevel ? gameMode.currentLevel.name : 'null'} levels={gameMode.levels.length}
+  <br />
+  Buffer: &quot;{wordBuffer}&quot; ({wordBuffer.length}/{gameMode.currentWord?.length || 0}) 
+  | Predicción actual: &quot;{currentPrediction}&quot; ({(confidence * 100).toFixed(2)}%)
       </div>
 
       {/* PANTALLA INICIAL */}
@@ -737,7 +702,7 @@ export default function GamePage() {
                     disabled={!currentPrediction || currentPrediction === '?' || confidence < 0.7 || wordBuffer.length >= (gameMode.currentWord?.length || 0)}
                     className="mr-2"
                   >
-                    ➕ Agregar "{currentPrediction}"
+                    ➕ Agregar &quot;{currentPrediction}&quot;
                   </Button>
                 </div>
                 
@@ -910,3 +875,5 @@ export default function GamePage() {
     </AppLayout>
   )
 }
+
+

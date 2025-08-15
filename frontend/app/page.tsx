@@ -27,7 +27,7 @@ import { useState } from "react"
 
 export default function LandingPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { user, profile, loading } = useAuth()
+  const { user, profile } = useAuth()
 
   return (
     <div className="flex flex-col min-h-screen">

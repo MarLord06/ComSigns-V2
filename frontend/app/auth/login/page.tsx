@@ -28,6 +28,14 @@ function LoginPageContent() {
   const { signIn, user, loading: authLoading } = useAuth()
   const router = useRouter()
 
+
+  // Redirigir si ya está autenticado
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.push('/dashboard')
+    }
+  }, [user, authLoading, router])
+
   // Mostrar loading mientras se inicializa la auth
   if (authLoading) {
     return (
@@ -39,13 +47,6 @@ function LoginPageContent() {
       </div>
     )
   }
-
-  // Redirigir si ya está autenticado
-  useEffect(() => {
-    if (!authLoading && user) {
-      router.push('/dashboard')
-    }
-  }, [user, authLoading, router])
 
   const validateEmail = (email: string): string | null => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

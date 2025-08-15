@@ -62,7 +62,7 @@ export function useCamera() {
     } finally { setIsInitializing(false); }
   }, [isSupported]);
 
-  const captureAndSendFrame = useCallback((cameraViewRef?: React.RefObject<any>, forceTranslating = false) => {
+  const captureAndSendFrame = useCallback((cameraViewRef?: React.RefObject<{ getVideoElement?: () => HTMLVideoElement }>, forceTranslating = false) => {
     const shouldTranslate = forceTranslating || isTranslating;
     if (process.env.NEXT_PUBLIC_DEBUG === '1') console.debug('[CAM] captureAndSendFrame llamado, isTranslating:', isTranslating, 'forceTranslating:', forceTranslating, 'shouldTranslate:', shouldTranslate);
     if (!shouldTranslate) {
@@ -102,7 +102,7 @@ export function useCamera() {
     }
   }, [isTranslating, sendFrame]);
 
-  const startRealtimeTranslation = useCallback((cameraViewRef?: React.RefObject<any>) => {
+  const startRealtimeTranslation = useCallback((cameraViewRef?: React.RefObject<{ getVideoElement?: () => HTMLVideoElement }>) => {
     if (isTranslating) return;
     if (process.env.NEXT_PUBLIC_DEBUG === '1') console.log('[CAM] iniciar realtime, cameraViewRef:', !!cameraViewRef?.current);
     connectRealtime();

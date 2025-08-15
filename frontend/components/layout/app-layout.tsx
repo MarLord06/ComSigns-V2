@@ -27,7 +27,7 @@ interface AppLayoutProps {
 interface NavItem {
   href: string;
   label: string;
-  icon: any;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   key: string;
 }
 

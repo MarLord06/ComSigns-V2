@@ -3,7 +3,7 @@ import { IncomingRealtimeMessage, OutgoingFrameMessage, OutgoingPingMessage, Pre
 export type RealtimeEvents = {
   open: () => void;
   close: (ev?: CloseEvent) => void;
-  error: (err: any) => void;
+  error: (err: unknown) => void;
   session: (sessionId: string) => void;
   prediction: (prediction: PredictionBase) => void;
   raw: (msg: IncomingRealtimeMessage) => void;
@@ -40,10 +40,18 @@ export class RealtimePredictionWS {
   private opts: Required<Omit<RealtimeOptions, 'url'>>;
   private url: string;
   private status: RealtimeStatus = 'idle';
-  private listeners: { [K in keyof RealtimeEvents]?: RealtimeEvents[K][] } = {};
+  private listeners = {
+    open: [] as Array<() => void>,
+    close: [] as Array<(ev?: CloseEvent) => void>,
+    error: [] as Array<(err: unknown) => void>,
+    session: [] as Array<(sessionId: string) => void>,
+    prediction: [] as Array<(prediction: PredictionBase) => void>,
+    raw: [] as Array<(msg: IncomingRealtimeMessage) => void>,
+    reconnect: [] as Array<(attempt: number, delayMs: number) => void>,
+  };
   private reconnectAttempts = 0;
-  private heartbeatTimer: any = null;
-  private heartbeatTimeout: any = null;
+private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+private heartbeatTimeout: ReturnType<typeof setTimeout> | null = null;
   private sessionId: string | null = null;
 
   constructor(options: RealtimeOptions = {}) {
@@ -57,19 +65,63 @@ export class RealtimePredictionWS {
   getStatus() { return this.status; }
   getSessionId() { return this.sessionId; }
 
-  on<K extends keyof RealtimeEvents>(event: K, cb: RealtimeEvents[K]) {
-    const arr = (this.listeners[event] as RealtimeEvents[K][] | undefined) || [];
-    arr.push(cb);
-    this.listeners[event] = arr as any;
-    return () => {
-      const list = (this.listeners[event] as RealtimeEvents[K][] | undefined) || [];
-      this.listeners[event] = list.filter(l => l !== cb) as any;
-    };
+  /**
+   * Registra un listener para un evento de WebSocket.
+   * El tipo de los argumentos depende del evento (ver RealtimeEvents).
+   * Implementación con overloads y switch para tipado fuerte.
+   */
+  on(event: 'open', cb: () => void): () => void;
+  on(event: 'close', cb: (ev?: CloseEvent) => void): () => void;
+  on(event: 'error', cb: (err: unknown) => void): () => void;
+  on(event: 'session', cb: (sessionId: string) => void): () => void;
+  on(event: 'prediction', cb: (prediction: PredictionBase) => void): () => void;
+  on(event: 'raw', cb: (msg: IncomingRealtimeMessage) => void): () => void;
+  on(event: 'reconnect', cb: (attempt: number, delayMs: number) => void): () => void;
+  on(event: keyof RealtimeEvents, cb: unknown): () => void {
+    switch (event) {
+      case 'open':
+        this.listeners.open.push(cb as () => void);
+        return () => {
+          this.listeners.open = this.listeners.open.filter(l => l !== cb);
+        };
+      case 'close':
+        this.listeners.close.push(cb as (ev?: CloseEvent) => void);
+        return () => {
+          this.listeners.close = this.listeners.close.filter(l => l !== cb);
+        };
+      case 'error':
+        this.listeners.error.push(cb as (err: unknown) => void);
+        return () => {
+          this.listeners.error = this.listeners.error.filter(l => l !== cb);
+        };
+      case 'session':
+        this.listeners.session.push(cb as (sessionId: string) => void);
+        return () => {
+          this.listeners.session = this.listeners.session.filter(l => l !== cb);
+        };
+      case 'prediction':
+        this.listeners.prediction.push(cb as (prediction: PredictionBase) => void);
+        return () => {
+          this.listeners.prediction = this.listeners.prediction.filter(l => l !== cb);
+        };
+      case 'raw':
+        this.listeners.raw.push(cb as (msg: IncomingRealtimeMessage) => void);
+        return () => {
+          this.listeners.raw = this.listeners.raw.filter(l => l !== cb);
+        };
+      case 'reconnect':
+        this.listeners.reconnect.push(cb as (attempt: number, delayMs: number) => void);
+        return () => {
+          this.listeners.reconnect = this.listeners.reconnect.filter(l => l !== cb);
+        };
+      default:
+        throw new Error(`Evento no soportado: ${event}`);
+    }
   }
 
   private emit<K extends keyof RealtimeEvents>(event: K, ...args: Parameters<RealtimeEvents[K]>) {
     this.listeners[event]?.forEach(l => {
-      try { (l as any)(...args); } catch (e) { if (this.opts.log) console.error('[Realtime] listener error', e); }
+      try { (l as (...args: Parameters<RealtimeEvents[K]>) => void)(...args); } catch (e) { if (this.opts.log) console.error('[Realtime] listener error', e); }
     });
   }
 
@@ -104,7 +156,7 @@ export class RealtimePredictionWS {
       this.emit('raw', parsed);
       switch (parsed.type) {
         case 'session':
-          this.sessionId = (parsed as any).session_id;
+          this.sessionId = (parsed as { session_id: string }).session_id;
           this.emit('session', this.sessionId!);
           break;
         case 'prediction': {
@@ -115,7 +167,7 @@ export class RealtimePredictionWS {
           this.clearHeartbeatTimeout();
           break;
         case 'error':
-          this.emit('error', (parsed as any).error);
+          this.emit('error', (parsed as { error: unknown }).error);
           break;
         default:
           // ignore or expose via raw
