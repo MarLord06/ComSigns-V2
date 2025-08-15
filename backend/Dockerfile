@@ -46,7 +46,7 @@ RUN pip install --no-cache-dir \
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Crear directorio para modelos
-RUN mkdir -p /app/models
+RUN mkdir -p /models
 
 # Copiar código de la aplicación al final
 COPY . .
