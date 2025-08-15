@@ -53,8 +53,9 @@ COPY . .
 # Exponer puerto
 EXPOSE 8000
 
-# Variables de entorno de runtime
-ENV ENVIRONMENT=development
 
-# Comando por defecto
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Variables de entorno de runtime (producción por defecto)
+ENV ENVIRONMENT=production
+
+# Comando por defecto para producción (sin --reload)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
