@@ -42,24 +42,10 @@ class MLService:
         """
         try:
             # 1. Intentar cargar el modelo entrenado v2 arreglado (máxima prioridad)
-            model_path_v2_fixed = "/app/models/model_trained_v2_fixed.h5"
+            model_path_v2_fixed = "/models/model.h5"
             if os.path.exists(model_path_v2_fixed):
                 self.model = load_model(model_path_v2_fixed)
                 print(f"✅ Modelo entrenado v2 arreglado cargado exitosamente desde: {model_path_v2_fixed}")
-                return
-            
-            # 2. Intentar cargar el modelo desde la configuración
-            config_model_path = settings.MODEL_PATH
-            if os.path.exists(config_model_path):
-                self.model = load_model(config_model_path)
-                print(f"✅ Modelo desde configuración cargado exitosamente desde: {config_model_path}")
-                return
-            
-            # 3. Intentar cargar el mejor modelo como respaldo
-            best_model_path = "/app/models/best_model.h5"
-            if os.path.exists(best_model_path):
-                self.model = load_model(best_model_path)
-                print(f"✅ Mejor modelo cargado exitosamente desde: {best_model_path}")
                 return
             
             raise ModelError("No se encontró ningún modelo disponible")
