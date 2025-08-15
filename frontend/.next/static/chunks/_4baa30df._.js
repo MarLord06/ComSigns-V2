@@ -3004,6 +3004,7 @@ function useCamera() {
             stopRealtimeTranslation();
             setPermission('prompt');
             setError('');
+        // Corregido: expresión suelta, ahora es un bloque válido
         }
     }["useCamera.useCallback[cleanup]"], [
         stopRealtimeTranslation
@@ -3017,15 +3018,20 @@ function useCamera() {
             canvas.width = videoRef.current.videoWidth;
             canvas.height = videoRef.current.videoHeight;
             ctx.drawImage(videoRef.current, 0, 0);
+            // Corregido: expresión suelta, se agrega llamada a función
             return new Promise({
                 "useCamera.useCallback[captureFrame]": (res)=>{
                     canvas.toBlob({
                         "useCamera.useCallback[captureFrame]": (b)=>{
-                            b ? res(new File([
-                                b
-                            ], 'frame.jpg', {
-                                type: 'image/jpeg'
-                            })) : res(null);
+                            if (b) {
+                                res(new File([
+                                    b
+                                ], 'frame.jpg', {
+                                    type: 'image/jpeg'
+                                }));
+                            } else {
+                                res(null);
+                            }
                         }
                     }["useCamera.useCallback[captureFrame]"], 'image/jpeg', 0.8);
                 }
@@ -4289,11 +4295,12 @@ class GamificationService {
             throw error;
         }
     }
-    async endGameSession(sessionId, finalScore, completed = false) {
+    async endGameSession(sessionId, finalScore, userId, completed = false) {
         try {
             console.log('[GAMIFICATION_SERVICE] Ending game session:', {
                 sessionId,
                 finalScore,
+                userId,
                 completed
             });
             const authHeaders = await this.getAuthHeaders();
@@ -4306,7 +4313,8 @@ class GamificationService {
                 },
                 body: JSON.stringify({
                     session_id: sessionId,
-                    final_score: finalScore
+                    final_score: finalScore,
+                    user_id: userId
                 })
             });
             console.log('[GAMIFICATION_SERVICE] End response status:', response.status);
@@ -4329,7 +4337,8 @@ class GamificationService {
             console.log('[GAMIFICATION_SERVICE] 📝 Enviando intento al backend:', {
                 target_word: attemptData.target_word,
                 predicted_word: attemptData.predicted_word,
-                is_correct: attemptData.is_correct
+                is_correct: attemptData.is_correct,
+                user_id: attemptData.user_id
             });
             // Mapear los datos al formato esperado por el backend
             const response = await fetch(`${this.baseUrl}/game/attempt`, {
@@ -4339,6 +4348,7 @@ class GamificationService {
                 },
                 body: JSON.stringify({
                     session_id: attemptData.session_id,
+                    user_id: attemptData.user_id,
                     letter_id: this.getLetterIdFromName(attemptData.target_letter),
                     is_correct: attemptData.is_correct,
                     time_taken: attemptData.time_taken,
@@ -4686,8 +4696,8 @@ function useGameMode() {
     // 🆕 NUEVO: Enviar todos los intentos acumulados al backend
     const submitAllAttempts = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
         "useGameMode.useCallback[submitAllAttempts]": async ()=>{
-            if (!currentSession || pendingAttemptsRef.current.length === 0) {
-                console.log('[GAME_MODE] 📭 Sin intentos pendientes para enviar');
+            if (!currentSession || pendingAttemptsRef.current.length === 0 || !user?.id) {
+                console.log('[GAME_MODE] 📭 Sin intentos pendientes para enviar o user.id no disponible');
                 return;
             }
             const attempts = pendingAttemptsRef.current;
@@ -4698,6 +4708,7 @@ function useGameMode() {
                     console.log(`[GAME_MODE] 📝 Enviando intento ${index + 1}/${attempts.length}: ${attempt.targetWord} → ${attempt.predictedWord}`);
                     await gamificationService.recordAttempt({
                         session_id: currentSession.session_id,
+                        user_id: user.id,
                         target_letter: attempt.targetWord.charAt(0) || 'A',
                         predicted_letter: attempt.predictedWord.charAt(0) || 'A',
                         is_correct: attempt.isCorrect,
@@ -4722,7 +4733,8 @@ function useGameMode() {
         }
     }["useGameMode.useCallback[submitAllAttempts]"], [
         currentSession,
-        gamificationService
+        gamificationService,
+        user?.id
     ]);
     // Stop timer when time runs out
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
@@ -5029,8 +5041,12 @@ function useGameMode() {
             console.log('[GAME_MODE] 📦 ENVIANDO intentos acumulados...');
             await submitAllAttempts();
             try {
+                if (!user?.id) {
+                    console.error('[GAME_MODE] ❌ No user.id disponible para finalizar sesión');
+                    return;
+                }
                 console.log('[GAME_MODE] 📝 Finalizando sesión:', currentSession.session_id);
-                const response = await gamificationService.endGameSession(currentSession.session_id, gameProgress.score, completed);
+                const response = await gamificationService.endGameSession(currentSession.session_id, gameProgress.score, user.id, completed);
                 console.log('[GAME_MODE] ✅ Sesión finalizada exitosamente:', response);
                 // 🗑️ Limpiar sesión después de finalizar exitosamente
                 setCurrentSession(null);
@@ -5044,7 +5060,8 @@ function useGameMode() {
         gameProgress.score,
         gameState,
         submitAllAttempts,
-        gamificationService
+        gamificationService,
+        user?.id
     ]);
     const resetGame = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
         "useGameMode.useCallback[resetGame]": ()=>{

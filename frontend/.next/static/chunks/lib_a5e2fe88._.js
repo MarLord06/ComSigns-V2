@@ -64,6 +64,7 @@ const AuthProvider = ({ children })=>{
     const [profile, setProfile] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [stats, setStats] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [loading, setLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(true);
+    // Un usuario es nuevo si no tiene estadísticas o tiene 0 sesiones
     const [isNewUser, setIsNewUser] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "AuthProvider.useEffect": ()=>{
@@ -102,10 +103,6 @@ const AuthProvider = ({ children })=>{
                         ;
                         loadUserStats(session.user.id) // Quitar await para evitar bloqueos
                         ;
-                        // Verificar si es un usuario nuevo
-                        if (event === 'SIGNED_IN') {
-                            setIsNewUser(true);
-                        }
                     } else {
                         setProfile(null);
                         setStats(null);
@@ -167,6 +164,7 @@ const AuthProvider = ({ children })=>{
                     total_points: 0,
                     level: 1
                 });
+                setIsNewUser(true);
                 return;
             }
             console.log('Attempts data:', attemptsData);
@@ -184,6 +182,7 @@ const AuthProvider = ({ children })=>{
                     level: Math.floor(attemptsData.reduce((sum, result)=>sum + (result.points_earned || 0), 0) / 100) + 1
                 };
                 setStats(stats);
+                setIsNewUser(stats.total_sessions === 0);
                 console.log('Stats loaded successfully:', stats);
             } else {
                 // Usuario nuevo sin estadísticas
@@ -198,6 +197,7 @@ const AuthProvider = ({ children })=>{
                     level: 1
                 };
                 setStats(defaultStats);
+                setIsNewUser(true);
                 console.log('Using default stats for new user');
             }
         } catch (error) {
@@ -346,24 +346,10 @@ const AuthProvider = ({ children })=>{
             await loadUserStats(user.id);
         }
     };
+    // Marcar tutorial como completado: simplemente refresca stats para que isNewUser se actualice
     const completeTutorial = async ()=>{
         if (user) {
-            try {
-                const { error } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('profiles').update({
-                    is_new_user: false
-                }).eq('id', user.id);
-                if (error) {
-                    console.error('Error completing tutorial:', error);
-                } else {
-                    // Actualizar el estado local inmediatamente
-                    setProfile((prev)=>prev ? {
-                            ...prev,
-                            is_new_user: false
-                        } : null);
-                }
-            } catch (error) {
-                console.error('Error updating tutorial status:', error);
-            }
+            await refreshStats();
         }
     };
     const value = {
@@ -385,7 +371,7 @@ const AuthProvider = ({ children })=>{
         children: children
     }, void 0, false, {
         fileName: "[project]/lib/auth-context.tsx",
-        lineNumber: 369,
+        lineNumber: 355,
         columnNumber: 10
     }, this);
 };

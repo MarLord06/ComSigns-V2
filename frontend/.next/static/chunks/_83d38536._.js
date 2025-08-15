@@ -66,7 +66,7 @@ class RealtimePredictionWS {
     heartbeatTimeout = null;
     sessionId = null;
     constructor(options = {}){
-        const apiBase = ("TURBOPACK compile-time value", "http://localhost:8000") || ("TURBOPACK compile-time value", "http://localhost:8000") || 'http://localhost:8000';
+        const apiBase = ("TURBOPACK compile-time value", "localhost:8000") || ("TURBOPACK compile-time value", "localhost:8000") || 'http://localhost:8000';
         const wsBase = options.url || (apiBase.startsWith('https') ? apiBase.replace('https', 'wss') : apiBase.replace('http', 'ws'));
         this.url = wsBase.replace(/\/$/, '') + '/api/v1/ml/predict';
         this.opts = {
@@ -216,7 +216,7 @@ class RealtimePredictionWS {
             image: base64Image,
             timestamp: Date.now()
         };
-        if (this.opts.log) console.log('[RealtimeWS] Enviando frame, tamaño:', base64Image.length);
+        if (this.opts.log) console.log('[RealtimeWS] Enviando frame, tamaño:', base64Image.length, 'chars');
         this.ws.send(JSON.stringify(msg));
     }
     sendPing() {
@@ -264,6 +264,23 @@ function useRealtimePrediction(opts = {}) {
     const [sessionId, setSessionId] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [reconnectInfo, setReconnectInfo] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    // Crear callback estable para manejar predicciones
+    const handlePrediction = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "useRealtimePrediction.useCallback[handlePrediction]": (p)=>{
+            if (opts.log) console.log('[RT] prediction', p);
+            setLastPrediction({
+                "useRealtimePrediction.useCallback[handlePrediction]": (prev)=>{
+                    // Solo actualizar si hay cambios significativos para evitar re-renders innecesarios
+                    if (!prev || prev.letter !== p.letter || Math.abs((prev.confidence || 0) - (p.confidence || 0)) > 0.01) {
+                        return p;
+                    }
+                    return prev;
+                }
+            }["useRealtimePrediction.useCallback[handlePrediction]"]);
+        }
+    }["useRealtimePrediction.useCallback[handlePrediction]"], [
+        opts.log
+    ]);
     if (!serviceRef.current) {
         serviceRef.current = new __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$services$2f$realtime$2e$service$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["RealtimePredictionWS"]({
             log: opts.log
@@ -314,12 +331,7 @@ function useRealtimePrediction(opts = {}) {
                     setSessionId(id);
                 }
             }["useRealtimePrediction.useEffect.offSess"]);
-            const offPred = svc.on('prediction', {
-                "useRealtimePrediction.useEffect.offPred": (p)=>{
-                    if (opts.log) console.log('[RT] prediction', p);
-                    setLastPrediction(p);
-                }
-            }["useRealtimePrediction.useEffect.offPred"]);
+            const offPred = svc.on('prediction', handlePrediction);
             const offReconnect = svc.on('reconnect', {
                 "useRealtimePrediction.useEffect.offReconnect": (attempt, delayMs)=>{
                     if (opts.log) console.warn('[RT] reconnect', {
@@ -350,9 +362,12 @@ function useRealtimePrediction(opts = {}) {
                     offRaw();
                 }
             })["useRealtimePrediction.useEffect"];
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         }
-    }["useRealtimePrediction.useEffect"], []);
+    }["useRealtimePrediction.useEffect"], [
+        opts.autoConnect,
+        handlePrediction,
+        opts.log
+    ]);
     return {
         status,
         lastPrediction,
@@ -364,7 +379,7 @@ function useRealtimePrediction(opts = {}) {
         sendFrame
     };
 }
-_s(useRealtimePrediction, "Im2TcGsLwotPA8bkoyC6ueK0uEE=");
+_s(useRealtimePrediction, "zwsdZIkghox5C9Zk4XLjyn4G2nc=");
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
     __turbopack_context__.k.registerExports(module, globalThis.$RefreshHelpers$);
 }
@@ -1010,7 +1025,7 @@ function TestServicesPage() {
                                                     children: [
                                                         camera.currentPrediction || '...',
                                                         " (",
-                                                        Math.round(camera.confidence * 100),
+                                                        (camera.confidence * 100).toFixed(2),
                                                         "%)"
                                                     ]
                                                 }, void 0, true, {

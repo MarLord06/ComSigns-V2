@@ -71,7 +71,7 @@ function DebugPage() {
                                 columnNumber: 12
                             }, this),
                             " ",
-                            ("TURBOPACK compile-time value", "http://localhost:8000") || 'No definida'
+                            ("TURBOPACK compile-time value", "localhost:8000") || 'No definida'
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/debug/page.tsx",

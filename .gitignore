@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+### NO ignores lib/ global, solo si es de dependencias externas
 lib64/
 parts/
 sdist/
@@ -271,16 +271,19 @@ docker-compose.local.yml
 *.tflite
 *.pb
 *.onnx
-models/
-checkpoints/
-logs/
-tensorboard_logs/
-mlruns/
-artifacts/
+
+# Si tienes carpetas models/, logs/, checkpoints/ propias del proyecto, quita el ignore global y usa patrones más específicos si es necesario
+# Por ejemplo, ignora solo modelos grandes o archivos temporales:
+models/*.h5
+models/*.pkl
+checkpoints/*
+logs/*
+tensorboard_logs/*
+mlruns/*
+artifacts/*
 
 # Dataset files (add specific patterns for your datasets)
-dataset/
-data/
+## No ignores dataset/ ni data/ si son parte del repo
 *.csv
 *.json
 *.npz
@@ -305,8 +308,7 @@ credentials.json
 
 # Logs
 *.log
-logs/
-log/
+## No ignores logs/ ni log/ si son parte del repo
 
 # Database files
 *.db
@@ -323,19 +325,6 @@ cache/
 *.sublime-workspace
 .vscode/settings.json
 
-# Project specific
-backend/models/*.h5
-backend/models/*.pkl
-src/generacion_modelo/checkpoints/
-src/generacion_modelo/logs/
-modelo/
-hand_data.npy
-hand_labels.npy
-
-# Arduino IDE
-*.hex
-*.elf
-*.map
 
 # Temporary upload files
 uploads/
@@ -349,5 +338,4 @@ tmp/
 *.cert
 
 # Environment specific
-.env.*
-!.env.example
+.env

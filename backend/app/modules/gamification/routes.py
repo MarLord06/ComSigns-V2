@@ -25,6 +25,7 @@ class StartGameRequest(BaseModel):
 
 class GameAttemptRequest(BaseModel):
     session_id: str
+    user_id: str  # UUID del usuario desde el frontend
     letter_id: int  # Referencia a letters.id en lugar de target_word
     is_correct: bool
     time_taken: float
@@ -242,19 +243,17 @@ async def get_game_session(
 @router.post("/game/attempt")
 async def record_game_attempt(
     request: GameAttemptRequest,
-    current_user: dict = Depends(get_current_user),
     supabase_service = Depends(get_supabase_dependency)
 ) -> Dict[str, Any]:
-    """Registrar intento de juego"""
+    """Registrar intento de juego (user_id desde el body)"""
     try:
         # Verificar que la sesión pertenezca al usuario y esté activa
         session = await supabase_service.get_game_session(request.session_id)
-        if not session or session["user_id"] != current_user["id"]:
+        if not session or session["user_id"] != request.user_id:
             raise HTTPException(
                 status_code=404,
                 detail="Sesión no encontrada"
             )
-        
         # 🛡️ VERIFICAR QUE LA SESIÓN ESTÁ ACTIVA
         if session.get("status") != "active":
             logger.warning(f"🛡️ Intento ignorado - Sesión {request.session_id} no está activa (status: {session.get('status')})")
@@ -262,13 +261,11 @@ async def record_game_attempt(
                 status_code=400,
                 detail="La sesión de juego ya ha finalizado"
             )
-
         # Registrar intento con nueva estructura
         logger.info(f"[ATTEMPT] Registrando intento: target_word={request.target_word}, predicted_word={request.predicted_word}, is_correct={request.is_correct}")
-        
         success = await supabase_service.record_game_attempt(
             session_id=request.session_id,
-            user_id=current_user["id"],
+            user_id=request.user_id,
             letter_id=request.letter_id,  # Para compatibilidad
             is_correct=request.is_correct,
             time_taken=request.time_taken,
@@ -276,18 +273,15 @@ async def record_game_attempt(
             target_word=request.target_word,  # Palabra objetivo completa
             predicted_word=request.predicted_word  # Palabra predicha completa
         )
-
         if not success:
             raise HTTPException(
                 status_code=500,
                 detail="Error registrando intento"
             )
-
         return {
             "status": "success",
             "message": "Intento registrado correctamente"
         }
-
     except HTTPException:
         raise
     except Exception as e:
@@ -380,20 +374,18 @@ async def get_all_achievements(
 @router.post("/game/end")
 async def end_game_session(
     request: dict,
-    current_user: dict = Depends(get_current_user),  # Restaurar autenticación
     supabase_service = Depends(get_supabase_dependency)
 ) -> Dict[str, Any]:
-    """Finalizar sesión de juego"""
+    """Finalizar sesión de juego (user_id desde el body)"""
     try:
         session_id = request.get("session_id")
         final_score = request.get("final_score", 0)
-        
-        if not session_id:
+        user_id = request.get("user_id")
+        if not session_id or not user_id:
             raise HTTPException(
                 status_code=400,
-                detail="session_id es requerido"
+                detail="session_id y user_id son requeridos"
             )
-        
         # Verificar que la sesión existe y está activa
         session = await supabase_service.get_game_session(session_id)
         if not session:
@@ -401,7 +393,6 @@ async def end_game_session(
                 status_code=404,
                 detail="Sesión no encontrada"
             )
-        
         # 🛡️ PROTEGER CONTRA MÚLTIPLES LLAMADAS - verificar si ya está finalizada
         if session.get("status") != "active":
             logger.info(f"🛡️ Sesión {session_id} ya fue finalizada anteriormente (status: {session.get('status')})")
@@ -409,24 +400,19 @@ async def end_game_session(
                 "status": "success", 
                 "message": "Sesión ya estaba finalizada"
             }
-            
-        # Verificar que la sesión pertenece al usuario (restaurado)
-        if session.get("user_id") != current_user.get("id"):
-            # Log para debug pero no fallar - permitir desarrollo
-            logger.warning(f"User ID mismatch: session={session.get('user_id')}, current={current_user.get('id')}")
+        # Verificar que la sesión pertenece al usuario
+        if session.get("user_id") != user_id:
+            logger.warning(f"User ID mismatch: session={session.get('user_id')}, user_id={user_id}")
             # raise HTTPException(
             #     status_code=403,
             #     detail="No tienes permisos para finalizar esta sesión"
             # )
-        
         # Finalizar sesión
         await supabase_service.end_game_session(session_id, final_score)
-        
         return {
             "status": "success",
             "message": "Sesión finalizada correctamente"
         }
-
     except HTTPException:
         raise
     except Exception as e:
