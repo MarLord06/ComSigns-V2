@@ -54,8 +54,7 @@ COPY . .
 
 
 # Exponer puerto
-EXPOSE 8000
-
+EXPOSE $PORT
 
 # Variables de entorno de runtime (producción por defecto)
 ENV ENVIRONMENT=production
