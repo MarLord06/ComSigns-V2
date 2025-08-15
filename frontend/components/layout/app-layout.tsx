@@ -33,7 +33,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Inicio', icon: Home, key: 'home' },
-  { href: '/practice', label: 'Práctica', icon: Target, key: 'practice' },
+  // { href: '/practice', label: 'Práctica', icon: Target, key: 'practice' },
   { href: '/game', label: 'Juego', icon: Gamepad2, key: 'game' },
   { href: '/translate', label: 'Traducir', icon: Play, key: 'translate' },
 ];

@@ -112,6 +112,7 @@ export default function LandingPage() {
               </div>
             </div>
           </Link>
+          {/*
           <Link
             href="/practice"
             className="flex items-center gap-3 p-3 rounded-lg hover:bg-purple-50 transition-colors group motion-reduce:transition-none"
@@ -126,6 +127,7 @@ export default function LandingPage() {
               </div>
             </div>
           </Link>
+          */}
           <Link
             href="/game"
             className="flex items-center gap-3 p-3 rounded-lg hover:bg-green-50 transition-colors group motion-reduce:transition-none"
@@ -253,6 +255,7 @@ export default function LandingPage() {
                   </CardContent>
                 </Card>
 
+                {/*
                 <Card className="text-center hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <Target className="h-12 w-12 text-green-600 mx-auto mb-2" />
@@ -269,6 +272,7 @@ export default function LandingPage() {
                     </Link>
                   </CardContent>
                 </Card>
+                */}
 
                 <Card className="text-center hover:shadow-lg transition-shadow">
                   <CardHeader>
