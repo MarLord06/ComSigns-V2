@@ -307,9 +307,11 @@ export default function GamePage() {
   }, [gameMode.gameState, gameMode.currentLevel, gameMode.levels])
 
   // Cargar niveles al montar el componente
+  // Cargar niveles solo una vez al montar el componente (arregla el loop infinito)
   useEffect(() => {
-    gameMode.loadLevels()
-  }, [gameMode])
+    gameMode.loadLevels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Manejar timer de inactividad (NUEVO)
   useEffect(() => {
